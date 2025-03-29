@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Share2, Copy, CheckCircle2, Calendar, Users, Tag, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useWalletStore } from '@/store/walletStore';
+import { useSubscription } from '@/hooks/useSubscription';
 import axios from 'axios';
 
 interface Content {
@@ -36,7 +37,9 @@ interface RelatedContent {
 }
 
 export default function ContentDetail() {
-	const { id } = useParams();
+	const params = useParams();
+	// id 값을 명확한 string 타입으로 처리
+	const id = Array.isArray(params.id) ? params.id[0] : params.id || '';
 	const router = useRouter();
 	const { address } = useWalletStore();
 	const sharePopupRef = useRef<HTMLDivElement>(null);
@@ -44,12 +47,18 @@ export default function ContentDetail() {
 
 	const [content, setContent] = useState<Content | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [subscribed, setSubscribed] = useState(false);
 	const [showShareOption, setShowShareOption] = useState(false);
 	const [referralCopied, setReferralCopied] = useState(false);
 	const [relatedContents, setRelatedContents] = useState<RelatedContent[]>([]);
 	const [referrer, setReferrer] = useState<string | null>(null);
 	const [subscriberCount, setSubscriberCount] = useState(0);
+
+	// 스마트 컨트랙트를 통해 구독 상태 확인
+	const {
+		isSubscribed: subscribed,
+		loading: subscriptionLoading,
+		error: subscriptionError,
+	} = useSubscription(address, id);
 
 	// URL에서 추천인 코드 확인
 	useEffect(() => {
@@ -80,7 +89,7 @@ export default function ContentDetail() {
 		const fetchContent = async () => {
 			try {
 				setLoading(true);
-				const response = await axios.get(`/api/contents/${id}`);
+				const response = await axios.get(`/api/contents/${id}?userAddress=${address}`);
 				const data = response.data;
 
 				if (data && data.content) {
@@ -88,9 +97,10 @@ export default function ContentDetail() {
 					setRelatedContents(data.relatedContents || []);
 					setSubscriberCount(data.subscriberCount || 0);
 
-					// 구독 상태를 확인하는 API 호출 (임시로 랜덤 설정)
-					// 실제로는 subscription API를 통해 확인해야 함
-					setSubscribed(Math.random() > 0.5);
+					// API에서 반환한 구독 상태를 사용하는 경우 아래 주석 해제
+					// if (data.isSubscribed !== undefined) {
+					// 	setSubscribed(data.isSubscribed);
+					// }
 				}
 			} catch (error) {
 				console.error('콘텐츠 로드 오류:', error);
@@ -102,7 +112,7 @@ export default function ContentDetail() {
 		if (id) {
 			fetchContent();
 		}
-	}, [id]);
+	}, [id, address]);
 
 	useEffect(() => {
 		// 팝업 외부 클릭 감지 핸들러
@@ -136,18 +146,28 @@ export default function ContentDetail() {
 		// 추천인 정보를 포함한 구독 처리
 		const referrerData = referrer ? { referrerCode: referrer } : null;
 
-		// Mock 구독 처리
-		setSubscribed(true);
-
-		// 추천인 정보가 있는 경우 표시
-		if (referrerData) {
-			alert(`${content?.price} HSK로 "${content?.title}" 콘텐츠를 구독했습니다. 추천인: ${referrer}`);
-		} else {
-			alert(`${content?.price} HSK로 "${content?.title}" 콘텐츠를 구독했습니다.`);
-		}
-
-		// 실제 구현에서는 여기서 API 호출이나 스마트 컨트랙트 호출
-		// 예: subscribeToContent(id, referrerData?.referrerCode);
+		// 구독 API 호출
+		axios
+			.post('/api/subscriptions', {
+				wallet_address: address, // 사용자 지갑 주소
+				contentId: id, // 콘텐츠 ID
+				referralCode: referrerData?.referrerCode, // 추천인 코드
+				amount: content?.price, // 구독 금액
+				transactionHash: '', // 스마트 컨트랙트 처리 후 트랜잭션 해시 추가
+			})
+			.then((response) => {
+				// 성공 시 처리
+				alert(
+					`${content?.price} HSK로 "${content?.title}" 콘텐츠를 구독했습니다.${referrer ? ` 추천인: ${referrer}` : ''}`
+				);
+				// 구독 상태 갱신을 위해 페이지 새로고침
+				window.location.reload();
+			})
+			.catch((error) => {
+				// 오류 처리
+				console.error('구독 오류:', error);
+				alert(`구독 처리 중 오류가 발생했습니다: ${error.response?.data?.error || error.message}`);
+			});
 	};
 
 	const generateReferralLink = () => {
@@ -229,13 +249,6 @@ export default function ContentDetail() {
 		<div className="bg-gray-50 min-h-screen pb-16">
 			{/* 콘텐츠 상세 정보 */}
 			<div className="container mx-auto px-4 py-8">
-				{/* 뒤로 가기 링크 */}
-				<div className="mb-6">
-					<Link href="/contents" className="text-gray-500 hover:text-gray-700 flex items-center">
-						<span className="mr-1">&larr;</span> 목록으로 돌아가기
-					</Link>
-				</div>
-
 				{/* 추천인 배지 표시 */}
 				<ReferrerBadge />
 
@@ -303,11 +316,10 @@ export default function ContentDetail() {
 						></div>
 					</div>
 
-					{/* 콘텐츠 설명 */}
+					{/* 콘텐츠 개요 & 구독 정보 및 버튼 */}
 					<div className="bg-white rounded-xl shadow-md p-6 mb-8">
 						<h2 className="text-xl font-bold text-gray-800 mb-4">콘텐츠 개요</h2>
-						<p className="text-gray-700 mb-6">{content.description}</p>
-
+						<div className="text-gray-700 mb-6">{content.description}</div>
 						<div className="border-t border-gray-200 pt-6">
 							<div className="flex justify-between items-center mb-6">
 								<div className="flex items-center">
@@ -384,45 +396,24 @@ export default function ContentDetail() {
 							>
 								{subscribed ? '구독 중' : '구독하기'}
 							</button>
-						</div>
-					</div>
 
-					{/* 콘텐츠 미리보기 */}
-					<div className="bg-white rounded-xl shadow-md p-6 mb-8">
-						<h2 className="text-xl font-bold text-gray-800 mb-4">콘텐츠 미리보기</h2>
-						<div className="prose max-w-none">
-							{/* 마크다운 콘텐츠 10줄만 보여주기 */}
-							<div
-								className="relative overflow-hidden max-h-[300px]"
-								dangerouslySetInnerHTML={{
-									__html: content.description
-										.split('\n')
-										.slice(0, 10)
-										.join('\n')
-										.replace(/^# (.*)/gm, '<h1>$1</h1>')
-										.replace(/^## (.*)/gm, '<h2>$1</h2>')
-										.replace(/^### (.*)/gm, '<h3>$1</h3>')
-										.replace(/^\* (.*)/gm, '<li>$1</li>')
-										.replace(/^[0-9]+\. (.*)/gm, '<ol><li>$1</li></ol>')
-										.replace(/\n/g, '<br>'),
-								}}
-							/>
-						</div>
-
-						<div className="text-center mt-6">
-							<p className="text-gray-500 mb-4">
-								{subscribed
-									? '구독 중인 콘텐츠입니다. 전체 내용을 확인하세요.'
-									: '구독 후 전체 콘텐츠를 확인할 수 있습니다.'}
-							</p>
-							{subscribed && (
-								<Link
-									href={`/contents/${id}/view`}
-									className="inline-flex items-center text-primary font-medium hover:underline"
-								>
-									전체 콘텐츠 보기
-									<ArrowRight className="h-4 w-4 ml-1" />
-								</Link>
+							{subscriptionLoading ? (
+								<p className="text-gray-500 mt-4 text-center">구독 상태 확인 중...</p>
+							) : subscriptionError ? (
+								<p className="text-red-500 mt-4 text-center">구독 상태 확인 중 오류 발생: {subscriptionError}</p>
+							) : (
+								subscribed && (
+									<div className="mt-6 text-center">
+										<p className="text-green-600 mb-3">구독 중인 콘텐츠입니다. 전체 내용을 확인하세요.</p>
+										<Link
+											href={`/contents/${id}/view`}
+											className="inline-flex items-center bg-green-50 text-green-700 px-5 py-2 rounded-lg border border-green-200 hover:bg-green-100 transition-colors"
+										>
+											전체 콘텐츠 보기
+											<ArrowRight className="h-4 w-4 ml-1" />
+										</Link>
+									</div>
+								)
 							)}
 						</div>
 					</div>

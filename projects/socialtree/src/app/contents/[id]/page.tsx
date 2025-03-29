@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Share2, Copy, CheckCircle2, Calendar, Users, Tag, ArrowRight } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 import { useWalletStore } from '@/store/walletStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import axios from 'axios';

@@ -3,35 +3,17 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import ContentCard from '@/components/global/ContentCard';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase 클라이언트 초기화
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function Home() {
-	// 목업 데이터 - 실제로는 API 또는 supabase에서 가져올 것
-	const mockContents = [
-		{
-			id: 1,
-			title: '비트코인 투자 전략 가이드',
-			description: '비트코인 시장 분석 및 투자 전략을 알려드립니다.',
-			price: 50,
-			author: '김준호',
-			category: '암호화폐',
-		},
-		{
-			id: 2,
-			title: '월 200만원 배당금 수익 전략',
-			description: '안정적인 배당 투자로 수익 창출하는 방법',
-			price: 30,
-			author: '이민지',
-			category: '주식',
-		},
-		{
-			id: 3,
-			title: '부동산 투자의 모든 것',
-			description: '부동산 시장 분석 및 투자 전략을 공유합니다.',
-			price: 80,
-			author: '박상현',
-			category: '부동산',
-		},
-	];
+	// 실제 콘텐츠 데이터 상태
+	const [contents, setContents] = useState<any[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
 
 	// 배너 슬라이드 데이터
 	const banners = [
@@ -71,6 +53,53 @@ export default function Home() {
 		}, 5000);
 		return () => clearInterval(interval);
 	}, [banners.length]);
+
+	// 콘텐츠 데이터 가져오기
+	useEffect(() => {
+		async function fetchContents() {
+			try {
+				setIsLoading(true);
+				// 최신순으로 콘텐츠 3개 가져오기 (테이블 구조 확인)
+				console.log('Supabase 연결 시도...');
+
+				// 먼저 테이블 구조 확인을 위해 첫 번째 레코드만 가져와 모든 필드 확인
+				const { data: sampleData, error: sampleError } = await supabase.from('contents').select('*').limit(1);
+
+				if (sampleError) {
+					console.error('샘플 데이터 조회 오류:', sampleError);
+					return;
+				}
+
+				// 샘플 데이터의 구조 확인
+				if (sampleData && sampleData.length > 0) {
+					console.log('테이블 구조:', Object.keys(sampleData[0]));
+
+					// 실제 데이터 조회
+					const { data, error } = await supabase
+						.from('contents')
+						.select('*') // 모든 필드 가져오기
+						.limit(3); // 최신 3개만
+
+					if (error) {
+						console.error('콘텐츠 데이터 조회 오류:', error);
+						return;
+					}
+
+					if (data) {
+						setContents(data);
+					}
+				} else {
+					console.log('테이블에 데이터가 없습니다.');
+				}
+			} catch (error) {
+				console.error('콘텐츠 데이터 조회 중 오류 발생:', error);
+			} finally {
+				setIsLoading(false);
+			}
+		}
+
+		fetchContents();
+	}, []);
 
 	return (
 		<>
@@ -169,21 +198,35 @@ export default function Home() {
 				{/* 콘텐츠 섹션 */}
 				<div className="mb-12">
 					<h2 className="text-2xl font-bold text-gray-900 mb-6">인기 콘텐츠</h2>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{mockContents.map((content) => (
-							<ContentCard
-								key={content.id}
-								id={content.id}
-								title={content.title}
-								description={content.description}
-								price={content.price}
-								creator={content.author}
-								category={content.category}
-								showHoverEffect={true}
-								currencySymbol="HSK"
-							/>
-						))}
-					</div>
+					{isLoading ? (
+						<div className="flex justify-center py-10">
+							<div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+						</div>
+					) : contents.length > 0 ? (
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+							{contents.map((content) => (
+								<ContentCard
+									key={content.id}
+									id={content.id}
+									title={content.title}
+									description={content.description || ''}
+									price={content.price}
+									creator={content.creator}
+									category={content.category}
+									showHoverEffect={true}
+									thumbnail={
+										content.thumbnail_url ||
+										`https://source.unsplash.com/random/600x400?${content.category || 'finance'}`
+									}
+									currencySymbol="HSK"
+								/>
+							))}
+						</div>
+					) : (
+						<div className="text-center py-10 bg-white rounded-lg shadow-sm">
+							<p className="text-gray-500">표시할 콘텐츠가 없습니다.</p>
+						</div>
+					)}
 				</div>
 
 				{/* 소개 섹션 */}

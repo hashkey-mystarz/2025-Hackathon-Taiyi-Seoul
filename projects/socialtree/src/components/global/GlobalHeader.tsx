@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import LoginButton from '@/components/LoginButton';
-import { useAuth } from '@/hooks/useAuth';
 import { useWalletStore } from '@/store/walletStore';
 
 export default function GlobalHeader() {

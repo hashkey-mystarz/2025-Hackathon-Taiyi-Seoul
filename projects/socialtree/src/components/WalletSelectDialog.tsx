@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { WalletType } from '@/hooks/useAuth';
 
 interface WalletSelectDialogProps {

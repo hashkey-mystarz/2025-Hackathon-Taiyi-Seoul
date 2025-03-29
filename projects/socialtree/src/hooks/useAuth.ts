@@ -34,31 +34,6 @@ export function useAuth() {
 	const [error, setError] = useState<string | null>(null);
 	const [user, setUser] = useState<User | null>(null);
 
-	// 사용자 정보 조회
-	const fetchUserInfo = useCallback(async (walletAddress: string) => {
-		try {
-			// API를 통해 사용자 정보 조회
-			const response = await axios.get(`/api/users/wallet/${walletAddress}`);
-			if (response.data && response.data.user) {
-				setUser(response.data.user);
-				return response.data.user;
-			}
-			return null;
-		} catch (error) {
-			console.error('사용자 정보 조회 실패:', error);
-			return null;
-		}
-	}, []);
-
-	// 지갑 주소가 변경될 때마다 사용자 정보 갱신
-	useEffect(() => {
-		if (address) {
-			fetchUserInfo(address);
-		} else {
-			setUser(null);
-		}
-	}, [address, fetchUserInfo]);
-
 	// 지갑 연결 상태 및 이벤트 리스너
 	useEffect(() => {
 		if (typeof window === 'undefined' || !address) return;
@@ -138,25 +113,6 @@ export function useAuth() {
 				// 연결 상태 저장
 				const walletAddress = accounts[0];
 				setAddress(walletAddress);
-
-				// 사용자 정보 조회
-				const userInfo = await fetchUserInfo(walletAddress);
-
-				// 사용자 정보가 없으면 회원가입 API
-				if (!userInfo) {
-					try {
-						const signupResponse = await axios.post('/api/users/signup', {
-							wallet_address: walletAddress,
-						});
-
-						if (signupResponse.data && signupResponse.data.user) {
-							setUser(signupResponse.data.user);
-						}
-					} catch (signupError) {
-						console.error('회원가입 처리 오류:', signupError);
-					}
-				}
-
 				return { address: walletAddress };
 			} catch (err: any) {
 				const errorMsg = err.message || '지갑 연결 중 오류가 발생했습니다.';
@@ -167,7 +123,7 @@ export function useAuth() {
 				setIsLoading(false);
 			}
 		},
-		[setAddress, fetchUserInfo]
+		[setAddress]
 	);
 
 	// 로그아웃

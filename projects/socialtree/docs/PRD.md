@@ -105,10 +105,10 @@
 
 ### 지갑 연동 및 로그인 흐름
 
-- [ ] MetaMask 연결 (ethers.js로 주소 획득)
-- [ ] 연결된 지갑 주소 상태관리 (Zustand 사용)
-- [ ] Supabase 연동 (로그인 없이 지갑 기반 유저 등록)
-- [ ] 지갑 서명 후 유저 등록 (signMessage → 인증용)
+- [x] MetaMask 연결 (ethers.js로 주소 획득)
+- [x] 연결된 지갑 주소 상태관리 (Zustand 사용)
+- [x] Supabase 연동 (로그인 없이 지갑 기반 유저 등록)
+- [x] 지갑 서명 후 유저 등록 (signMessage → 인증용)
 
 ---
 

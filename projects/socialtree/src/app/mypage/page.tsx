@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useHashkeyContext } from '@/components/provider/HashkeyContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreditCard, BookOpen, Award, History, ArrowUpRight, LogOut, Clock } from 'lucide-react';
 import ContentCard from '@/components/global/ContentCard';
+import { useAuth } from '@/hooks/useAuth';
 
 // Mock data - 실제 구현 시 API 호출로 대체
 const MOCK_SUBSCRIPTIONS = [
@@ -66,7 +66,7 @@ const MOCK_REFERRALS = [
 
 export default function MyPage() {
 	const router = useRouter();
-	const { address, isConnected, disconnectWallet } = useHashkeyContext();
+	const { address, isConnected, isAuthenticated, logout } = useAuth();
 
 	const [activeTab, setActiveTab] = useState('overview');
 	const [totalCommission, setTotalCommission] = useState(0);
@@ -75,7 +75,7 @@ export default function MyPage() {
 	const [indirectReferrals, setIndirectReferrals] = useState(0);
 
 	useEffect(() => {
-		// 로그인 상태 확인
+		// 로그인 상태 확인 (지갑 연결 또는 인증 둘 다 확인)
 		if (!isConnected) {
 			router.push('/');
 			return;
@@ -95,6 +95,31 @@ export default function MyPage() {
 		setIndirectReferrals(indirect);
 	}, [isConnected, router]);
 
+	// 로그인 상태 변경 감지를 위한 별도의 useEffect
+	useEffect(() => {
+		// 로그인이 필요한 페이지에서 연결이 끊어지면 즉시 리다이렉트
+		const checkLoginStatus = () => {
+			if (!isConnected) {
+				router.push('/');
+			}
+		};
+
+		// 초기 체크
+		checkLoginStatus();
+
+		// 메타마스크 이벤트 리스너 (계정 변경 시)
+		const { ethereum } = window as any;
+		if (ethereum) {
+			ethereum.on('accountsChanged', checkLoginStatus);
+		}
+
+		return () => {
+			if (ethereum) {
+				ethereum.removeListener('accountsChanged', checkLoginStatus);
+			}
+		};
+	}, [isConnected, router]);
+
 	const handleWithdraw = () => {
 		if (totalCommission <= 0) {
 			alert('출금 가능한 커미션이 없습니다.');
@@ -103,6 +128,11 @@ export default function MyPage() {
 
 		alert(`${totalCommission} HSK가 지갑으로 출금되었습니다.`);
 		setTotalCommission(0);
+	};
+
+	const handleLogout = () => {
+		logout();
+		router.push('/');
 	};
 
 	if (!isConnected) {
@@ -132,13 +162,7 @@ export default function MyPage() {
 						</div>
 					</div>
 
-					<button
-						onClick={() => {
-							disconnectWallet();
-							router.push('/');
-						}}
-						className="flex items-center text-gray-600 hover:text-red-500"
-					>
+					<button onClick={handleLogout} className="flex items-center text-gray-600 hover:text-red-500">
 						<LogOut className="h-4 w-4 mr-1" />
 						<span>로그아웃</span>
 					</button>

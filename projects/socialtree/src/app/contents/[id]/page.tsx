@@ -401,24 +401,34 @@ export default function ContentDetail() {
 										ref={shareButtonRef}
 										onClick={() => setShowShareOption(!showShareOption)}
 										disabled={!subscribed}
-										className={`p-2 rounded-full ${
+										className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
 											subscribed
-												? 'text-gray-500 hover:text-primary hover:bg-gray-100'
-												: 'text-gray-300 cursor-not-allowed'
+												? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+												: 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
 										}`}
 									>
-										<Share2 className="h-5 w-5" />
+										<Share2 className="h-4 w-4" />
+										<span className="text-sm font-medium">
+											{subscribed ? '추천하고 커미션 받기' : '구독 후 추천 가능'}
+										</span>
 									</button>
 
 									{showShareOption && (
 										<div
 											ref={sharePopupRef}
-											className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg p-4 z-10"
+											className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg p-4 z-10 border border-green-100"
 										>
-											<h3 className="text-sm font-medium text-gray-700 mb-2">추천 링크 공유하기</h3>
-											<p className="text-xs text-gray-500 mb-3">
-												이 링크로 친구가 구독하면 20%의 추천 보상을 받을 수 있습니다!
-											</p>
+											<div className="bg-green-50 -m-4 mb-3 p-4 rounded-t-lg border-b border-green-100">
+												<div className="flex items-center justify-between">
+													<h3 className="text-sm font-medium text-gray-700">추천하고 수익 얻기</h3>
+													<span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md font-medium">
+														커미션 {Math.round(content.price * 0.2)} HSK
+													</span>
+												</div>
+												<p className="text-xs text-gray-600 mt-1">
+													친구가 이 링크로 구독하면 콘텐츠 가격의 20%를 보상으로 받습니다
+												</p>
+											</div>
 											<div className="flex">
 												<input
 													type="text"
@@ -478,7 +488,6 @@ export default function ContentDetail() {
 										.replace(/\n/g, '<br>'),
 								}}
 							/>
-							<div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
 						</div>
 
 						<div className="text-center mt-6">

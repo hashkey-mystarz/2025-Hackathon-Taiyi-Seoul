@@ -80,11 +80,11 @@
 보상 구조: Recursive Commission Logic
 구독시 추천자에게 20% 전달, 상위 추천자로 올라가며 20%씩 재귀 분배 (최소 단위 미만이면 중단)
 
-- [ ] `subscribe(address referrer)` + 유저 트리 저장
-- [ ] `distribute(uint256 amount)` – 재귀 분배
-- [ ] `getCommission(address)` – 커미션 조회
-- [ ] `withdraw()` – 수령
-- [ ] 하드햇 환경 구성 + 배포 스크립트 작성
+- [x] `subscribe(address referrer)` + 유저 트리 저장
+- [x] `distribute(uint256 amount)` – 재귀 분배
+- [x] `getCommission(address)` – 커미션 조회
+- [x] `withdraw()` – 수령
+- [x] 하드햇 환경 구성 + 배포 스크립트 작성
 
 > ※ 핵심은 스마트컨트랙트에서 구동 → 백엔드는 단순 연동 보조 역할
 

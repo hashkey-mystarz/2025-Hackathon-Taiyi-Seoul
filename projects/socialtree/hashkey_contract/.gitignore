@@ -1,0 +1,30 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# testing
+/coverage
+coverage.json
+
+# Hardhat files
+cache/
+artifacts/
+typechain-types/
+
+# env files
+.env*
+secrets.json
+mnemonic.txt
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Gas reporter output
+gasReporterOutput.json

@@ -21,7 +21,7 @@ You are a Senior full-stack web developer and blockchain developer. You are an E
 - If you do not know the answer, say so, instead of guessing.
 - Always check the package versions in [package.json](mdc:package.json) when writing code.
 - Always refer to [PRD.md](mdc:docs/PRD.md) to ensure development aligns with the overall project goals.
-- Refer to the [HashkeyHackathon.md](mdc:docs/HashkeyHackathon.md) for more information.
+- Refer to the [HashkeyChain.md](mdc:docs/HashkeyChain.md) and [HashkeyHackathon.md](mdc:docs/HashkeyHackathon.md) for more information about hashkey chain and hackathon.
 - Refer to the `.env` file for environment variables.
 
 	 

@@ -8,6 +8,7 @@ import { CreditCard, BookOpen, Award, History, ArrowUpRight, LogOut, Clock } fro
 import ContentCard from '@/components/global/ContentCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useWalletStore } from '@/store/walletStore';
+import { useRewards } from '@/hooks/useRewards';
 
 // Mock data - 실제 구현 시 API 호출로 대체
 const MOCK_SUBSCRIPTIONS = [
@@ -67,8 +68,9 @@ const MOCK_REFERRALS = [
 
 export default function MyPage() {
 	const router = useRouter();
-	const { logout, isLoading } = useAuth();
+	const { logout, isLoading, user } = useAuth();
 	const { address } = useWalletStore();
+	const { rewards, isLoading: rewardsLoading, errorMessage, fetchRewards, withdrawRewards } = useRewards(user?.id);
 
 	const [activeTab, setActiveTab] = useState('overview');
 	const [totalCommission, setTotalCommission] = useState(0);
@@ -96,7 +98,12 @@ export default function MyPage() {
 
 		const indirect = MOCK_REFERRALS.filter((item) => item.level > 1).length;
 		setIndirectReferrals(indirect);
-	}, []);
+
+		// 실제 API에서 보상 데이터 가져오기
+		if (user?.id) {
+			fetchRewards();
+		}
+	}, [user?.id, fetchRewards]);
 
 	// 로그인 상태 확인 effect
 	useEffect(() => {
@@ -112,14 +119,26 @@ export default function MyPage() {
 		}
 	}, [address, router, hydrated]);
 
-	const handleWithdraw = () => {
+	const handleWithdraw = async () => {
 		if (totalCommission <= 0) {
 			alert('출금 가능한 커미션이 없습니다.');
 			return;
 		}
 
-		alert(`${totalCommission} HSK가 지갑으로 출금되었습니다.`);
-		setTotalCommission(0);
+		try {
+			// API를 통한 실제 출금 처리
+			const result = await withdrawRewards();
+
+			if (result) {
+				alert(`${result.transaction.amount} HSK가 지갑으로 출금되었습니다.`);
+				setTotalCommission(0);
+			} else if (errorMessage) {
+				alert(`출금 실패: ${errorMessage}`);
+			}
+		} catch (error) {
+			console.error('출금 처리 오류:', error);
+			alert('출금 처리 중 오류가 발생했습니다.');
+		}
 	};
 
 	const handleLogout = () => {

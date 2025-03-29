@@ -1,92 +1,69 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { useHashkeyContext } from '@/components/provider/HashkeyContext';
 
-export default function ConnectHashKey() {
-	const [account, setAccount] = useState<string>('');
-	const [isConnected, setIsConnected] = useState<boolean>(false);
-	const [isLoading, setIsLoading] = useState<boolean>(false);
+interface ConnectHashKeyProps {
+	showHint?: boolean;
+}
 
-	// 지갑 연결 상태 체크
-	useEffect(() => {
-		checkIfWalletIsConnected();
-	}, []);
-
-	// 지갑 연결 상태 확인
-	const checkIfWalletIsConnected = async () => {
-		try {
-			const { ethereum } = window as any;
-
-			if (!ethereum) {
-				console.log('MetaMask가 설치되어 있지 않습니다!');
-				return;
-			}
-
-			const accounts = await ethereum.request({ method: 'eth_accounts' });
-
-			if (accounts.length !== 0) {
-				const account = accounts[0];
-				setAccount(account);
-				setIsConnected(true);
-			}
-		} catch (error) {
-			console.log(error);
-		}
-	};
-
-	// 지갑 연결
-	const connectWallet = async () => {
-		try {
-			setIsLoading(true);
-			const { ethereum } = window as any;
-
-			if (!ethereum) {
-				alert('MetaMask를 설치해주세요!');
-				return;
-			}
-
-			const accounts = await ethereum.request({
-				method: 'eth_requestAccounts',
-			});
-
-			setAccount(accounts[0]);
-			setIsConnected(true);
-		} catch (error) {
-			console.log(error);
-		} finally {
-			setIsLoading(false);
-		}
-	};
-
-	// 지갑 연결 해제
-	const disconnectWallet = () => {
-		setAccount('');
-		setIsConnected(false);
-	};
+export default function ConnectHashKey({ showHint = false }: ConnectHashKeyProps) {
+	const { address, isConnected, isLoading, isCorrectChain, connectWallet, disconnectWallet, switchToHashkeyNetwork } =
+		useHashkeyContext();
 
 	return (
-		<div>
+		<div className="flex flex-col items-center gap-2">
 			{isConnected ? (
-				<div className="flex flex-col items-center gap-2">
-					<p className="text-sm text-gray-600">
-						{account.substring(0, 6)}...{account.substring(account.length - 4)}
-					</p>
+				<>
+					<div className="flex items-center gap-2">
+						<div className={`w-2 h-2 rounded-full ${isCorrectChain ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+						<p className="text-sm text-gray-600">
+							{address?.substring(0, 6)}...{address?.substring(address.length - 4)}
+						</p>
+					</div>
+
+					{!isCorrectChain && (
+						<button
+							onClick={switchToHashkeyNetwork}
+							disabled={isLoading}
+							className="px-4 py-1 bg-yellow-500 text-white rounded-lg text-xs hover:bg-yellow-600 transition-colors disabled:bg-yellow-300 flex items-center gap-1"
+						>
+							{isLoading ? (
+								<>
+									<span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full"></span>
+									<span>전환 중...</span>
+								</>
+							) : (
+								'해시키 네트워크로 전환'
+							)}
+						</button>
+					)}
+
 					<button
 						onClick={disconnectWallet}
 						className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
 					>
 						연결 해제
 					</button>
-				</div>
+				</>
 			) : (
-				<button
-					onClick={connectWallet}
-					disabled={isLoading}
-					className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-blue-300"
-				>
-					{isLoading ? '연결 중...' : '지갑 연결'}
-				</button>
+				<div className="flex flex-col items-center gap-2">
+					<button
+						onClick={connectWallet}
+						disabled={isLoading}
+						className="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors disabled:bg-primary/50 flex items-center gap-2"
+					>
+						{isLoading ? (
+							<>
+								<span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+								<span>연결 중...</span>
+							</>
+						) : (
+							'지갑 연결'
+						)}
+					</button>
+
+					{showHint && <p className="text-xs text-gray-500 mt-1">이전에 연결한 지갑이 있습니다</p>}
+				</div>
 			)}
 		</div>
 	);

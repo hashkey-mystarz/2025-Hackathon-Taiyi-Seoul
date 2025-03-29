@@ -3,6 +3,7 @@ import '@/styles/globals.css';
 import { ReactQueryProvider } from '@/components/provider/ReactQueryProvider';
 import GlobalHeader from '@/components/global/GlobalHeader';
 import GlobalFooter from '@/components/global/GlobalFooter';
+import { HashkeyProvider } from '@/components/provider/HashkeyContext';
 
 export const metadata: Metadata = {
 	title: 'SocialTree | 금융 정보 SocialFi 플랫폼',
@@ -18,9 +19,11 @@ export default function RootLayout({
 		<html lang="ko" className="h-full">
 			<body className="flex flex-col min-h-screen bg-gray-50">
 				<ReactQueryProvider>
-					<GlobalHeader />
-					<main className="flex-grow pt-16">{children}</main>
-					<GlobalFooter />
+					<HashkeyProvider>
+						<GlobalHeader />
+						<main className="flex-grow pt-16">{children}</main>
+						<GlobalFooter />
+					</HashkeyProvider>
 				</ReactQueryProvider>
 			</body>
 		</html>

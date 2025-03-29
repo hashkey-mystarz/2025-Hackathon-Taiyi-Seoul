@@ -1,17 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useWalletStore } from '@/store/walletStore';
+import { useWalletStore, HASHKEY_TESTNET_CHAIN_ID } from '@/store/walletStore';
 import { ethers } from 'ethers';
 
 // 지갑 타입 정의
 export type WalletType = 'metamask' | 'phantom';
 
-// 로컬 스토리지 키
-const WALLET_CONNECTED_KEY = 'wallet_connected_before';
-const WALLET_TYPE_KEY = 'wallet_type';
-
 // 해시키 테스트넷 설정
 const HASHKEY_TESTNET = {
-	chainId: '0x85', // 133 in hex
+	chainId: HASHKEY_TESTNET_CHAIN_ID,
 	chainName: 'HashKey Chain Testnet',
 	rpcUrls: ['https://hashkeychain-testnet.alt.technology'],
 	nativeCurrency: {
@@ -28,31 +24,100 @@ export function useAuth() {
 		isConnected,
 		isAuthenticated,
 		authToken,
+		chainId,
 		setAddress,
 		setConnected,
 		setAuthenticated,
 		setAuthToken,
+		setChainId,
 		disconnect,
 	} = useWalletStore();
 
-	const [isLoading, setIsLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(true); // 초기값을 true로 설정
 	const [error, setError] = useState<string | null>(null);
-	const [walletType, setWalletType] = useState<WalletType>('metamask');
-	const [hasConnectedBefore, setHasConnectedBefore] = useState<boolean>(false);
-	const [isCorrectChain, setIsCorrectChain] = useState(true);
+	const [isCorrectChain, setIsCorrectChain] = useState(chainId === HASHKEY_TESTNET_CHAIN_ID);
 
-	// 초기화 시 이전 연결 여부와 지갑 타입 확인
+	// 초기화 및 이벤트 리스너 설정
 	useEffect(() => {
-		// 로컬 스토리지에서 이전 연결 여부 확인
-		const hasConnected = localStorage.getItem(WALLET_CONNECTED_KEY) === 'true';
-		setHasConnectedBefore(hasConnected);
-
-		// 로컬 스토리지에서 지갑 타입 확인
-		const savedWalletType = localStorage.getItem(WALLET_TYPE_KEY) as WalletType;
-		if (savedWalletType) {
-			setWalletType(savedWalletType);
+		// 이미 연결되어 있다면 체인 상태만 확인
+		if (isConnected && address) {
+			setIsCorrectChain(chainId === HASHKEY_TESTNET_CHAIN_ID);
+			setIsLoading(false);
+			return;
 		}
-	}, []);
+
+		const { ethereum } = window as any;
+		if (!ethereum) {
+			setIsLoading(false);
+			return;
+		}
+
+		// 지갑 연결 상태를 실시간으로 확인
+		const checkConnection = async () => {
+			try {
+				const accounts = await ethereum.request({ method: 'eth_accounts' });
+				const currentChainId = await ethereum.request({ method: 'eth_chainId' });
+
+				// 체인 ID 업데이트
+				setChainId(currentChainId);
+				setIsCorrectChain(currentChainId === HASHKEY_TESTNET_CHAIN_ID);
+
+				// 계정이 있고 주소가 다르면 주소 업데이트
+				if (accounts.length > 0) {
+					if (!isConnected || accounts[0] !== address) {
+						setAddress(accounts[0]);
+						setConnected(true);
+					}
+				} else if (isConnected) {
+					// MetaMask에 계정이 없는데 연결되어 있다고 상태가 되어 있으면 연결 해제
+					disconnect();
+				}
+			} catch (err) {
+				console.error('연결 상태 확인 중 오류:', err);
+			} finally {
+				// 연결 상태 체크가 완료되면 로딩 상태 해제
+				setIsLoading(false);
+			}
+		};
+
+		// 초기화 시 한 번 실행
+		checkConnection();
+
+		// 계정 변경 감지
+		const handleAccountsChanged = async (accounts: string[]) => {
+			if (accounts.length === 0) {
+				// 연결 해제됨
+				disconnect();
+			} else if (accounts[0] !== address) {
+				// 계정이 변경됨
+				setAddress(accounts[0]);
+				setConnected(true);
+				setAuthenticated(false); // 계정이 바뀌었으므로 재인증 필요
+			}
+		};
+
+		// 체인 변경 감지
+		const handleChainChanged = (newChainId: string) => {
+			setChainId(newChainId);
+			setIsCorrectChain(newChainId === HASHKEY_TESTNET_CHAIN_ID);
+
+			// 체인 변경 시 페이지를 새로고침하지 않고 상태만 업데이트
+			if (newChainId !== HASHKEY_TESTNET_CHAIN_ID) {
+				setError('HashKey 테스트넷에 연결해주세요.');
+			} else {
+				setError(null);
+			}
+		};
+
+		ethereum.on('accountsChanged', handleAccountsChanged);
+		ethereum.on('chainChanged', handleChainChanged);
+
+		// 컴포넌트 언마운트 시 이벤트 리스너 제거
+		return () => {
+			ethereum.removeListener('accountsChanged', handleAccountsChanged);
+			ethereum.removeListener('chainChanged', handleChainChanged);
+		};
+	}, [address, isConnected, setAddress, setConnected, setAuthenticated, disconnect, setChainId, chainId]);
 
 	// 해시키 테스트넷으로 전환
 	const switchToHashkeyTestnet = async () => {
@@ -66,6 +131,9 @@ export function useAuth() {
 					method: 'wallet_switchEthereumChain',
 					params: [{ chainId: HASHKEY_TESTNET.chainId }],
 				});
+				setChainId(HASHKEY_TESTNET.chainId);
+				setIsCorrectChain(true);
+				setError(null);
 				return true;
 			} catch (switchError: any) {
 				// 체인이 없으면 추가
@@ -74,6 +142,9 @@ export function useAuth() {
 						method: 'wallet_addEthereumChain',
 						params: [HASHKEY_TESTNET],
 					});
+					setChainId(HASHKEY_TESTNET.chainId);
+					setIsCorrectChain(true);
+					setError(null);
 					return true;
 				}
 				throw switchError;
@@ -93,6 +164,16 @@ export function useAuth() {
 				throw new Error('MetaMask가 설치되어 있지 않습니다. 설치 후 다시 시도해주세요.');
 			}
 
+			// 계정 요청 전에 먼저 네트워크 확인 및 전환
+			const chainId = await ethereum.request({ method: 'eth_chainId' });
+			if (chainId !== HASHKEY_TESTNET.chainId) {
+				const switched = await switchToHashkeyTestnet();
+				if (!switched) {
+					throw new Error('HashKey 테스트넷 연결 실패');
+				}
+			}
+
+			// 계정 요청
 			const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
 			if (accounts.length === 0) {
 				throw new Error('지갑 연결에 실패했습니다.');
@@ -100,20 +181,11 @@ export function useAuth() {
 
 			const walletAddress = accounts[0];
 
-			// 네트워크 확인 및 전환
-			const chainId = await ethereum.request({ method: 'eth_chainId' });
-			const isHashkeyTestnet = chainId === HASHKEY_TESTNET.chainId;
-			setIsCorrectChain(isHashkeyTestnet);
-
-			if (!isHashkeyTestnet) {
-				await switchToHashkeyTestnet();
-			}
-
 			// 연결 상태 저장
 			setAddress(walletAddress);
 			setConnected(true);
-			localStorage.setItem(WALLET_CONNECTED_KEY, 'true');
-			setHasConnectedBefore(true);
+			setChainId(HASHKEY_TESTNET.chainId);
+			setIsCorrectChain(true);
 
 			return walletAddress;
 		} catch (err: any) {
@@ -121,7 +193,7 @@ export function useAuth() {
 		}
 	};
 
-	// 팬텀 지갑 연결 (현재 미지원)
+	// 팬텀 지갑 연결 (현재 미지원, 필요 시 구현)
 	const connectPhantom = async (): Promise<string | null> => {
 		throw new Error('Phantom 지갑은 현재 지원하지 않습니다.');
 	};
@@ -133,10 +205,6 @@ export function useAuth() {
 			setError(null);
 
 			try {
-				// 선택한 지갑 타입 저장
-				setWalletType(type);
-				localStorage.setItem(WALLET_TYPE_KEY, type);
-
 				let walletAddress: string | null = null;
 
 				if (type === 'metamask') {
@@ -154,7 +222,7 @@ export function useAuth() {
 				setIsLoading(false);
 			}
 		},
-		[setAddress, setConnected]
+		[setAddress, setConnected, setChainId]
 	);
 
 	// 메시지 서명 요청
@@ -240,48 +308,7 @@ export function useAuth() {
 	const logout = useCallback(() => {
 		// 지갑 연결 해제
 		disconnect();
-
-		// 로컬 스토리지에서 연결 기록 제거
-		localStorage.removeItem(WALLET_CONNECTED_KEY);
-		localStorage.removeItem(WALLET_TYPE_KEY);
-
-		// 상태 초기화
-		setHasConnectedBefore(false);
 	}, [disconnect]);
-
-	// 메타마스크 이벤트 리스너
-	useEffect(() => {
-		const { ethereum } = window as any;
-
-		if (ethereum) {
-			// 계정 변경 감지
-			const handleAccountsChanged = (accounts: string[]) => {
-				if (accounts.length === 0) {
-					// 연결 해제됨
-					logout();
-				} else if (accounts[0] !== address) {
-					// 계정이 변경됨
-					setAddress(accounts[0]);
-					setAuthenticated(false); // 다시 인증 필요
-				}
-			};
-
-			// 체인 변경 감지
-			const handleChainChanged = (chainId: string) => {
-				setIsCorrectChain(chainId === HASHKEY_TESTNET.chainId);
-				window.location.reload(); // 체인 변경 시 페이지 리로드
-			};
-
-			ethereum.on('accountsChanged', handleAccountsChanged);
-			ethereum.on('chainChanged', handleChainChanged);
-
-			// 컴포넌트 언마운트 시 이벤트 리스너 제거
-			return () => {
-				ethereum.removeListener('accountsChanged', handleAccountsChanged);
-				ethereum.removeListener('chainChanged', handleChainChanged);
-			};
-		}
-	}, [address, logout, setAddress, setAuthenticated]);
 
 	return {
 		address,
@@ -290,12 +317,11 @@ export function useAuth() {
 		authToken,
 		isLoading,
 		error,
-		hasConnectedBefore,
 		isCorrectChain,
-		walletType,
 		connectWallet,
 		signAndAuthenticate,
 		logIn,
 		logout,
+		switchToHashkeyTestnet,
 	};
 }

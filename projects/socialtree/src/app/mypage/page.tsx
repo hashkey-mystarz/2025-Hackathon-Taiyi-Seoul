@@ -66,21 +66,17 @@ const MOCK_REFERRALS = [
 
 export default function MyPage() {
 	const router = useRouter();
-	const { address, isConnected, isAuthenticated, logout } = useAuth();
+	const { address, isConnected, isAuthenticated, logout, isLoading } = useAuth();
 
 	const [activeTab, setActiveTab] = useState('overview');
 	const [totalCommission, setTotalCommission] = useState(0);
 	const [nextMonthPayment, setNextMonthPayment] = useState(0);
 	const [directReferrals, setDirectReferrals] = useState(0);
 	const [indirectReferrals, setIndirectReferrals] = useState(0);
+	const [pageLoading, setPageLoading] = useState(true);
 
+	// 데이터 초기화 effect
 	useEffect(() => {
-		// 로그인 상태 확인 (지갑 연결 또는 인증 둘 다 확인)
-		if (!isConnected) {
-			router.push('/');
-			return;
-		}
-
 		// Mock 데이터 계산
 		const totalComm = MOCK_REFERRALS.reduce((sum, item) => sum + item.commission, 0);
 		setTotalCommission(totalComm);
@@ -93,32 +89,24 @@ export default function MyPage() {
 
 		const indirect = MOCK_REFERRALS.filter((item) => item.level > 1).length;
 		setIndirectReferrals(indirect);
-	}, [isConnected, router]);
+	}, []);
 
-	// 로그인 상태 변경 감지를 위한 별도의 useEffect
+	// 로그인 상태 확인 effect
 	useEffect(() => {
-		// 로그인이 필요한 페이지에서 연결이 끊어지면 즉시 리다이렉트
-		const checkLoginStatus = () => {
-			if (!isConnected) {
-				router.push('/');
-			}
-		};
-
-		// 초기 체크
-		checkLoginStatus();
-
-		// 메타마스크 이벤트 리스너 (계정 변경 시)
-		const { ethereum } = window as any;
-		if (ethereum) {
-			ethereum.on('accountsChanged', checkLoginStatus);
+		// 로딩 중일 때는 체크하지 않음 (연결 복원 중일 수 있으므로)
+		if (isLoading) {
+			return;
 		}
 
-		return () => {
-			if (ethereum) {
-				ethereum.removeListener('accountsChanged', checkLoginStatus);
-			}
-		};
-	}, [isConnected, router]);
+		// 로딩이 끝났고 연결이 없으면 홈으로 리다이렉트
+		if (!isConnected) {
+			router.push('/');
+			return;
+		}
+
+		// 로딩이 끝나고 연결이 있으면 페이지 로딩 완료
+		setPageLoading(false);
+	}, [isConnected, isLoading, router]);
 
 	const handleWithdraw = () => {
 		if (totalCommission <= 0) {
@@ -135,6 +123,20 @@ export default function MyPage() {
 		router.push('/');
 	};
 
+	// 로딩 중이거나 페이지 로딩 중이면 로딩 상태 표시
+	if (isLoading || pageLoading) {
+		return (
+			<div className="container mx-auto px-4 py-16 text-center">
+				<div className="flex flex-col items-center justify-center">
+					<div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+					<h2 className="text-xl font-medium text-gray-700">로딩 중...</h2>
+					<p className="text-gray-500 mt-2">연결 상태를 확인하고 있습니다.</p>
+				</div>
+			</div>
+		);
+	}
+
+	// 연결되지 않은 경우 (로딩 완료 후)
 	if (!isConnected) {
 		return (
 			<div className="container mx-auto px-4 py-16 text-center">

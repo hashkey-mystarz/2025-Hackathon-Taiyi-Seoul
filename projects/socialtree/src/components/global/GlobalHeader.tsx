@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useWalletStore } from '@/store/walletStore';
 import LoginButton from '@/components/LoginButton';
 
 export default function GlobalHeader() {
-	const { isLoading, isConnected } = useAuth();
+	const { isConnected } = useWalletStore();
 
 	return (
 		<header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 z-50">
@@ -24,9 +24,7 @@ export default function GlobalHeader() {
 							콘텐츠
 						</Link>
 
-						{isLoading ? (
-							<div className="h-10 w-24 bg-gray-200 animate-pulse rounded-lg"></div>
-						) : isConnected ? (
+						{isConnected ? (
 							<Link href="/mypage" className="text-gray-700 hover:text-primary px-2 py-2 text-sm font-semibold">
 								마이페이지
 							</Link>

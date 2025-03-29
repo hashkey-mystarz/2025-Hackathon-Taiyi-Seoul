@@ -108,7 +108,7 @@ export default function Contents() {
 
 	return (
 		<div className="container mx-auto px-4 py-8">
-			<h1 className="text-3xl font-bold mb-8 text-center text-gray-800">금융 콘텐츠 라이브러리</h1>
+			<h1 className="text-3xl font-bold mb-8 text-center text-gray-800">SocialTree 독점 콘텐츠</h1>
 
 			{/* 필터링 및 정렬 옵션 */}
 			<div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

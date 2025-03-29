@@ -41,7 +41,7 @@ export default function Home() {
 			description: 'SocialTree에서는 유익한 금융 콘텐츠를 구독하고, 추천을 통해 커미션을 받을 수 있습니다.',
 			buttonText: '시작하기',
 			bgColor: 'from-primary to-primary/90',
-			imageUrl: '/images/banners/finance-banner1.jpg',
+			imageUrl: '/images/banners/share_icon.png',
 		},
 		{
 			id: 2,
@@ -49,7 +49,7 @@ export default function Home() {
 			description: '친구를 초대할 때마다 20%의 커미션을 받고, 그들이 초대한 사람들로부터도 지속적인 수익이 발생합니다.',
 			buttonText: '친구 초대하기',
 			bgColor: 'from-primary/90 to-indigo-600',
-			imageUrl: '/images/banners/finance-banner2.jpg',
+			imageUrl: '/images/banners/commission_icon.png',
 		},
 		{
 			id: 3,
@@ -57,7 +57,7 @@ export default function Home() {
 			description: '전문가들의 고급 투자 인사이트로 여러분의 자산을 효과적으로 관리하세요.',
 			buttonText: '콘텐츠 둘러보기',
 			bgColor: 'from-indigo-600 to-indigo-700',
-			imageUrl: '/images/banners/finance-banner3.jpg',
+			imageUrl: '/images/banners/premium_icon.png',
 		},
 	];
 
@@ -88,25 +88,24 @@ export default function Home() {
 							{/* 배경 그라데이션 */}
 							<div className={`absolute inset-0 bg-gradient-to-r ${banner.bgColor} opacity-90 z-10`}></div>
 
-							{/* 배경 이미지 (실제 이미지는 추후 추가) */}
-							<div className="absolute inset-0 w-full h-full z-0">
-								<div className="relative w-full h-full bg-gray-800">
-									{/* 이미지가 없는 경우를 대비한 플레이스홀더 */}
-									<div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900"></div>
-								</div>
-							</div>
-
 							{/* 텍스트 콘텐츠 */}
 							<div className="relative z-20 flex h-full items-center">
-								<div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-									<div className="max-w-xl px-6 py-12 md:px-0 md:py-16 flex flex-col justify-center">
-										<h1 className="text-4xl md:text-5xl font-bold text-white mb-6 whitespace-pre-line">
+								<div className="max-w-7xl mx-auto w-full px-4 flex flex-col md:flex-row items-center gap-3 md:gap-6 sm:px-6 lg:px-8">
+									<div className="w-full md:w-3/5 px-6 py-8 md:px-0 md:py-10 flex flex-col justify-center order-2 md:order-1 pb-16 md:pb-10">
+										<h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 md:mb-6 whitespace-pre-line">
 											{banner.title}
 										</h1>
-										<p className="text-white/90 text-lg mb-8">{banner.description}</p>
-										<button className="w-fit bg-white text-primary px-8 py-4 rounded-lg font-semibold shadow-md hover:bg-white/90 transition duration-200">
+										<p className="text-white/90 text-base md:text-lg mb-6 md:mb-8 max-w-lg">{banner.description}</p>
+										<button className="w-fit bg-white text-primary px-6 py-3 rounded-lg font-semibold shadow-md hover:bg-white/90 transition duration-200">
 											{banner.buttonText}
 										</button>
+									</div>
+									<div className="w-full md:w-2/5 flex justify-center items-center py-2 md:py-4 order-1 md:order-2">
+										<img
+											src={banner.imageUrl}
+											alt="배너 이미지"
+											className="max-w-[160px] md:max-w-[240px] lg:max-w-[280px] object-contain h-auto filter drop-shadow-lg"
+										/>
 									</div>
 								</div>
 							</div>

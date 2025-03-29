@@ -6,126 +6,34 @@ import { useParams, useRouter } from 'next/navigation';
 import { Share2, Copy, CheckCircle2, Calendar, Users, Tag, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useWalletStore } from '@/store/walletStore';
-import Image from 'next/image';
+import axios from 'axios';
 
-// Mock data - 실제 구현 시 API 호출로 대체
-const MOCK_CONTENTS = [
-	{
-		id: 1,
-		title: '주식 시장 분석: 2025년 하반기 전망',
-		description: '글로벌 경제 동향과 주요 섹터별 투자 전략 분석',
-		price: 50,
-		creator: '김재무',
-		creatorAddress: '0x1234...5678',
-		subscriberCount: 1243,
-		category: '주식',
-		thumbnail: '/images/stock-analysis.jpg',
-		createdAt: '2025-06-15',
-		content: `
-      # 2025년 하반기 주식 시장 전망
-      
-      ## 글로벌 경제 환경
-      
-      2025년 하반기에는 글로벌 경제가 완만한 성장세를 이어갈 것으로 예상됩니다. 주요국 중앙은행의 통화정책 정상화가 진행 중이며, 인플레이션 압력은 점차 완화될 것으로 전망됩니다.
-      
-      ## 주요 투자 섹터
-      
-      ### 기술 섹터
-      AI 및 클라우드 관련 기업들의 성장이 지속될 전망입니다. 특히 생성형 AI 기술을 활용한 비즈니스 모델을 갖춘 기업들에 주목할 필요가 있습니다.
-      
-      ### 금융 섹터
-      금리 안정화에 따라 은행 및 금융 서비스 기업들의 실적 개선이 예상됩니다.
-      
-      ### 헬스케어 섹터
-      바이오테크 및 디지털 헬스케어 기업들의 혁신적인 솔루션에 주목해야 합니다.
-      
-      ## 투자 전략
-      
-      1. 포트폴리오 다각화: 섹터 및 지역별 분산 투자
-      2. 배당주 비중 확대: 불확실성 대비 안정적인 수익 추구
-      3. 기술 및 혁신 기업에 선별적 투자
-      
-      ## 리스크 요인
-      
-      - 지정학적 불안정성 증가
-      - 예상보다 높은 인플레이션 지속 가능성
-      - 글로벌 공급망 이슈
-      
-      이러한 요소들을 고려하여 2025년 하반기에는 방어적인 투자 전략과 기회 포착을 위한 공격적 전략의 균형이 중요할 것입니다.
-    `,
-		relatedContents: [2, 4, 6],
-	},
-	{
-		id: 2,
-		title: '암호화폐 투자 가이드: 초보자를 위한 완벽 안내서',
-		description: '블록체인 기술과 암호화폐 시장의 기초부터 고급 투자 전략까지',
-		price: 30,
-		creator: '이블록',
-		creatorAddress: '0xabcd...ef12',
-		subscriberCount: 987,
-		category: '암호화폐',
-		thumbnail: '/images/crypto-guide.jpg',
-		createdAt: '2025-05-28',
-		content: `암호화폐 투자에 관한 상세 내용입니다...`,
-		relatedContents: [1, 3, 5],
-	},
-	{
-		id: 3,
-		title: '부동산 투자의 비밀: 수익형 부동산 포트폴리오 구축',
-		description: '현명한 부동산 투자로 안정적인 현금 흐름 창출하기',
-		price: 40,
-		creator: '박부동',
-		creatorAddress: '0x7890...1234',
-		subscriberCount: 568,
-		category: '부동산',
-		thumbnail: '/images/real-estate.jpg',
-		createdAt: '2025-06-02',
-		content: `부동산 투자에 관한 상세 내용입니다...`,
-		relatedContents: [1, 5],
-	},
-	{
-		id: 4,
-		title: '퀀트 투자 전략: 데이터 기반 알고리즘 트레이딩',
-		description: '퀀트 분석을 활용한 체계적인 투자 시스템 구축 방법',
-		price: 60,
-		creator: '정퀀트',
-		creatorAddress: '0xfedc...ba98',
-		subscriberCount: 432,
-		category: '퀀트',
-		thumbnail: '/images/quant-trading.jpg',
-		createdAt: '2025-06-10',
-		content: `퀀트 투자에 관한 상세 내용입니다...`,
-		relatedContents: [1, 2],
-	},
-	{
-		id: 5,
-		title: '세금 최적화 전략: 투자자를 위한 절세 가이드',
-		description: '합법적인 세금 계획과 투자 수익 최대화 방법',
-		price: 35,
-		creator: '최세금',
-		creatorAddress: '0x2468...1357',
-		subscriberCount: 756,
-		category: '절세',
-		thumbnail: '/images/tax-guide.jpg',
-		createdAt: '2025-05-15',
-		content: `세금 최적화에 관한 상세 내용입니다...`,
-		relatedContents: [1, 3],
-	},
-	{
-		id: 6,
-		title: '글로벌 ETF 완전 분석: 분산 투자의 핵심',
-		description: '국제 시장을 아우르는 ETF 투자 포트폴리오 구성 전략',
-		price: 45,
-		creator: '황글로벌',
-		creatorAddress: '0x1357...2468',
-		subscriberCount: 621,
-		category: 'ETF',
-		thumbnail: '/images/global-etf.jpg',
-		createdAt: '2025-06-05',
-		content: `글로벌 ETF에 관한 상세 내용입니다...`,
-		relatedContents: [1, 4],
-	},
-];
+interface Content {
+	id: string;
+	title: string;
+	description: string;
+	price: number;
+	creator_id: string;
+	creator: {
+		id: string;
+		wallet_address: string;
+		nickname?: string;
+	};
+	thumbnail_url?: string;
+	category?: string;
+	created_at: string;
+}
+
+interface RelatedContent {
+	id: string;
+	title: string;
+	description?: string;
+	price: number;
+	creator_id: string;
+	thumbnail_url?: string;
+	category?: string;
+	created_at: string;
+}
 
 export default function ContentDetail() {
 	const { id } = useParams();
@@ -134,13 +42,14 @@ export default function ContentDetail() {
 	const sharePopupRef = useRef<HTMLDivElement>(null);
 	const shareButtonRef = useRef<HTMLButtonElement>(null);
 
-	const [content, setContent] = useState<any>(null);
+	const [content, setContent] = useState<Content | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [subscribed, setSubscribed] = useState(false);
 	const [showShareOption, setShowShareOption] = useState(false);
 	const [referralCopied, setReferralCopied] = useState(false);
-	const [relatedContents, setRelatedContents] = useState<any[]>([]);
+	const [relatedContents, setRelatedContents] = useState<RelatedContent[]>([]);
 	const [referrer, setReferrer] = useState<string | null>(null);
+	const [subscriberCount, setSubscriberCount] = useState(0);
 
 	// URL에서 추천인 코드 확인
 	useEffect(() => {
@@ -166,32 +75,33 @@ export default function ContentDetail() {
 		checkReferrer();
 	}, [id]);
 
+	// API를 통해 콘텐츠 데이터 가져오기
 	useEffect(() => {
-		// Mock API 호출 시뮬레이션
-		const fetchContent = () => {
-			setLoading(true);
+		const fetchContent = async () => {
+			try {
+				setLoading(true);
+				const response = await axios.get(`/api/contents/${id}`);
+				const data = response.data;
 
-			setTimeout(() => {
-				const foundContent = MOCK_CONTENTS.find((item) => item.id === Number(id));
+				if (data && data.content) {
+					setContent(data.content);
+					setRelatedContents(data.relatedContents || []);
+					setSubscriberCount(data.subscriberCount || 0);
 
-				if (foundContent) {
-					setContent(foundContent);
-
-					// 연관 콘텐츠 찾기
-					const related = foundContent.relatedContents
-						.map((relId) => MOCK_CONTENTS.find((item) => item.id === relId))
-						.filter(Boolean);
-					setRelatedContents(related);
-
-					// 구독 상태 랜덤 설정 (실제로는 API에서 확인)
+					// 구독 상태를 확인하는 API 호출 (임시로 랜덤 설정)
+					// 실제로는 subscription API를 통해 확인해야 함
 					setSubscribed(Math.random() > 0.5);
 				}
-
+			} catch (error) {
+				console.error('콘텐츠 로드 오류:', error);
+			} finally {
 				setLoading(false);
-			}, 500);
+			}
 		};
 
-		fetchContent();
+		if (id) {
+			fetchContent();
+		}
 	}, [id]);
 
 	useEffect(() => {
@@ -231,9 +141,9 @@ export default function ContentDetail() {
 
 		// 추천인 정보가 있는 경우 표시
 		if (referrerData) {
-			alert(`${content.price} HSK로 "${content.title}" 콘텐츠를 구독했습니다. 추천인: ${referrer}`);
+			alert(`${content?.price} HSK로 "${content?.title}" 콘텐츠를 구독했습니다. 추천인: ${referrer}`);
 		} else {
-			alert(`${content.price} HSK로 "${content.title}" 콘텐츠를 구독했습니다.`);
+			alert(`${content?.price} HSK로 "${content?.title}" 콘텐츠를 구독했습니다.`);
 		}
 
 		// 실제 구현에서는 여기서 API 호출이나 스마트 컨트랙트 호출
@@ -351,11 +261,11 @@ export default function ContentDetail() {
 						<div className="flex flex-wrap items-center text-gray-600 gap-4 mb-6">
 							<div className="flex items-center">
 								<Calendar className="h-4 w-4 mr-1" />
-								<span>{new Date(content.createdAt).toLocaleDateString('ko-KR')}</span>
+								<span>{new Date(content.created_at).toLocaleDateString('ko-KR')}</span>
 							</div>
 							<div className="flex items-center">
 								<Users className="h-4 w-4 mr-1" />
-								<span>{content.subscriberCount}명 구독중</span>
+								<span>{subscriberCount}명 구독중</span>
 							</div>
 							<div className="flex items-center">
 								<Tag className="h-4 w-4 mr-1" />
@@ -365,11 +275,17 @@ export default function ContentDetail() {
 
 						<div className="flex items-center mb-8">
 							<div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold mr-3">
-								{content.creator.substring(0, 1)}
+								{content.creator.nickname ? content.creator.nickname.substring(0, 1).toUpperCase() : ''}
 							</div>
 							<div>
-								<p className="font-medium text-gray-800">{content.creator}</p>
-								<p className="text-sm text-gray-500">{content.creatorAddress}</p>
+								<p className="font-medium text-gray-800">
+									{content.creator.nickname || content.creator.wallet_address.substring(0, 10) + '...'}
+								</p>
+								<p className="text-sm text-gray-500">
+									{content.creator.wallet_address.substring(0, 6) +
+										'...' +
+										content.creator.wallet_address.substring(content.creator.wallet_address.length - 4)}
+								</p>
 							</div>
 						</div>
 
@@ -377,7 +293,10 @@ export default function ContentDetail() {
 						<div
 							className="w-full h-64 md:h-96 bg-gray-200 rounded-xl mb-8 overflow-hidden"
 							style={{
-								backgroundImage: `url('https://source.unsplash.com/random/1200x600?${content.category}')`,
+								backgroundImage: `url('${
+									content.thumbnail_url ||
+									`https://source.unsplash.com/random/1200x600?${content.category || 'finance'}`
+								}')`,
 								backgroundSize: 'cover',
 								backgroundPosition: 'center',
 							}}
@@ -476,7 +395,7 @@ export default function ContentDetail() {
 							<div
 								className="relative overflow-hidden max-h-[300px]"
 								dangerouslySetInnerHTML={{
-									__html: content.content
+									__html: content.description
 										.split('\n')
 										.slice(0, 10)
 										.join('\n')
@@ -522,15 +441,17 @@ export default function ContentDetail() {
 										<div
 											className="w-16 h-16 rounded-lg bg-gray-200 flex-shrink-0 mr-3"
 											style={{
-												backgroundImage: `url('https://source.unsplash.com/random/100x100?${related.category}')`,
+												backgroundImage: `url('${
+													related.thumbnail_url ||
+													`https://source.unsplash.com/random/100x100?${related.category || 'finance'}`
+												}')`,
 												backgroundSize: 'cover',
+												backgroundPosition: 'center',
 											}}
 										></div>
 										<div>
 											<h3 className="font-medium text-gray-800 line-clamp-2">{related.title}</h3>
-											<p className="text-sm text-gray-500">
-												{related.creator} · {related.price} HSK
-											</p>
+											<p className="text-sm text-gray-500">크리에이터 · {related.price} HSK</p>
 										</div>
 									</Link>
 								))}

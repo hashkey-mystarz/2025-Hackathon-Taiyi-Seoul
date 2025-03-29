@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, BookOpen, Award, History, ArrowUpRight, LogOut, Clock } from 'lucide-react';
+import { CreditCard, BookOpen, Award, History, ArrowUpRight, LogOut, Clock, User, Edit, X } from 'lucide-react';
 import ContentCard from '@/components/global/ContentCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useWalletStore } from '@/store/walletStore';
 import { useRewards } from '@/hooks/useRewards';
+import axios from 'axios';
 
 // Mock data - 실제 구현 시 API 호출로 대체
 const MOCK_SUBSCRIPTIONS = [
@@ -78,11 +79,42 @@ export default function MyPage() {
 	const [directReferrals, setDirectReferrals] = useState(0);
 	const [indirectReferrals, setIndirectReferrals] = useState(0);
 	const [hydrated, setHydrated] = useState(false);
+	const [showNicknameModal, setShowNicknameModal] = useState(false);
+	const [nickname, setNickname] = useState('');
+	const [nicknameError, setNicknameError] = useState('');
+	const [nicknameLoading, setNicknameLoading] = useState(false);
+	const modalRef = useRef<HTMLDivElement>(null);
 
 	// Zustand 스토어 하이드레이션 확인
 	useEffect(() => {
 		setHydrated(true);
 	}, []);
+
+	// 닉네임 초기화
+	useEffect(() => {
+		if (user?.nickname) {
+			setNickname(user.nickname);
+		}
+	}, [user]);
+
+	// 모달 외부 클릭 감지
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+				setShowNicknameModal(false);
+			}
+		};
+
+		if (showNicknameModal) {
+			document.addEventListener('mousedown', handleClickOutside);
+		} else {
+			document.removeEventListener('mousedown', handleClickOutside);
+		}
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [showNicknameModal]);
 
 	// 데이터 초기화 effect
 	useEffect(() => {
@@ -141,6 +173,39 @@ export default function MyPage() {
 		}
 	};
 
+	const handleUpdateNickname = async () => {
+		if (!nickname.trim()) {
+			setNicknameError('닉네임을 입력해주세요.');
+			return;
+		}
+
+		if (nickname.length < 2 || nickname.length > 20) {
+			setNicknameError('닉네임은 2-20자 사이로 입력해주세요.');
+			return;
+		}
+
+		try {
+			setNicknameLoading(true);
+			setNicknameError('');
+
+			// API를 통한 닉네임 업데이트
+			await axios.put(`/api/users/${user?.id}/nickname`, { nickname });
+
+			// 사용자 정보 갱신 (useAuth 훅의 fetchUserInfo 메서드 호출)
+			if (user?.id) {
+				// 페이지 새로고침으로 대체 (실제로는 useAuth 훅의 fetchUserInfo 등의 메서드 호출)
+				window.location.reload();
+			}
+
+			setShowNicknameModal(false);
+		} catch (error) {
+			console.error('닉네임 업데이트 오류:', error);
+			setNicknameError('닉네임 업데이트 중 오류가 발생했습니다.');
+		} finally {
+			setNicknameLoading(false);
+		}
+	};
+
 	const handleLogout = () => {
 		// 로그아웃 처리
 		logout();
@@ -182,10 +247,23 @@ export default function MyPage() {
 				<div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
 					<div className="flex items-center">
 						<div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-4">
-							<span className="text-xl font-bold">{address?.substring(2, 3).toUpperCase()}</span>
+							<span className="text-xl font-bold">
+								{user?.nickname ? user.nickname.charAt(0).toUpperCase() : address?.substring(2, 3).toUpperCase()}
+							</span>
 						</div>
 						<div>
-							<h1 className="text-2xl font-bold text-gray-800">마이페이지</h1>
+							<div className="flex items-center">
+								<h1 className="text-2xl font-bold text-gray-800 mr-2">
+									{user?.nickname || `User-${address?.substring(2, 8)}`}
+								</h1>
+								<button
+									onClick={() => setShowNicknameModal(true)}
+									className="ml-2 text-gray-400 hover:text-primary"
+									title="닉네임 변경"
+								>
+									<Edit className="h-4 w-4" />
+								</button>
+							</div>
 							<p className="text-gray-500">{address}</p>
 						</div>
 					</div>
@@ -398,6 +476,53 @@ export default function MyPage() {
 					</TabsContent>
 				</Tabs>
 			</div>
+
+			{/* 닉네임 변경 모달 */}
+			{showNicknameModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+					<div ref={modalRef} className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-xl font-bold text-gray-800">닉네임 변경</h3>
+							<button onClick={() => setShowNicknameModal(false)} className="text-gray-400 hover:text-gray-600">
+								<X className="h-5 w-5" />
+							</button>
+						</div>
+
+						<div className="space-y-4">
+							<div>
+								<label htmlFor="nickname" className="block text-sm font-medium text-gray-700 mb-1">
+									닉네임
+								</label>
+								<input
+									type="text"
+									id="nickname"
+									value={nickname}
+									onChange={(e) => setNickname(e.target.value)}
+									placeholder="2-20자 사이로 입력해주세요"
+									className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+								/>
+								{nicknameError && <p className="mt-1 text-sm text-red-600">{nicknameError}</p>}
+							</div>
+
+							<div className="flex justify-end space-x-3">
+								<button
+									onClick={() => setShowNicknameModal(false)}
+									className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+								>
+									취소
+								</button>
+								<button
+									onClick={handleUpdateNickname}
+									disabled={nicknameLoading}
+									className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:bg-gray-400"
+								>
+									{nicknameLoading ? '처리 중...' : '저장'}
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

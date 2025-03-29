@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 interface ContentCardProps {
-	id: number;
+	id: string | number;
 	title: string;
 	description: string;
 	price: number;

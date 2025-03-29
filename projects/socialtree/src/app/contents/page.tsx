@@ -1,84 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ContentCard from '@/components/global/ContentCard';
+import axios from 'axios';
 
-// Mock data - 실제 구현 시 API 호출로 대체
-const MOCK_CONTENTS = [
-	{
-		id: 1,
-		title: '주식 시장 분석: 2025년 하반기 전망',
-		description: '글로벌 경제 동향과 주요 섹터별 투자 전략 분석',
-		price: 50,
-		creator: '김재무',
-		creatorAddress: '0x1234...5678',
-		subscriberCount: 1243,
-		category: '주식',
-		thumbnail: '/images/stock-analysis.jpg',
-		createdAt: '2025-06-15',
-	},
-	{
-		id: 2,
-		title: '암호화폐 투자 가이드: 초보자를 위한 완벽 안내서',
-		description: '블록체인 기술과 암호화폐 시장의 기초부터 고급 투자 전략까지',
-		price: 30,
-		creator: '이블록',
-		creatorAddress: '0xabcd...ef12',
-		subscriberCount: 987,
-		category: '암호화폐',
-		thumbnail: '/images/crypto-guide.jpg',
-		createdAt: '2025-05-28',
-	},
-	{
-		id: 3,
-		title: '부동산 투자의 비밀: 수익형 부동산 포트폴리오 구축',
-		description: '현명한 부동산 투자로 안정적인 현금 흐름 창출하기',
-		price: 40,
-		creator: '박부동',
-		creatorAddress: '0x7890...1234',
-		subscriberCount: 568,
-		category: '부동산',
-		thumbnail: '/images/real-estate.jpg',
-		createdAt: '2025-06-02',
-	},
-	{
-		id: 4,
-		title: '퀀트 투자 전략: 데이터 기반 알고리즘 트레이딩',
-		description: '퀀트 분석을 활용한 체계적인 투자 시스템 구축 방법',
-		price: 60,
-		creator: '정퀀트',
-		creatorAddress: '0xfedc...ba98',
-		subscriberCount: 432,
-		category: '퀀트',
-		thumbnail: '/images/quant-trading.jpg',
-		createdAt: '2025-06-10',
-	},
-	{
-		id: 5,
-		title: '세금 최적화 전략: 투자자를 위한 절세 가이드',
-		description: '합법적인 세금 계획과 투자 수익 최대화 방법',
-		price: 35,
-		creator: '최세금',
-		creatorAddress: '0x2468...1357',
-		subscriberCount: 756,
-		category: '절세',
-		thumbnail: '/images/tax-guide.jpg',
-		createdAt: '2025-05-15',
-	},
-	{
-		id: 6,
-		title: '글로벌 ETF 완전 분석: 분산 투자의 핵심',
-		description: '국제 시장을 아우르는 ETF 투자 포트폴리오 구성 전략',
-		price: 45,
-		creator: '황글로벌',
-		creatorAddress: '0x1357...2468',
-		subscriberCount: 621,
-		category: 'ETF',
-		thumbnail: '/images/global-etf.jpg',
-		createdAt: '2025-06-05',
-	},
-];
+// 콘텐츠 타입 정의
+interface Content {
+	id: string;
+	title: string;
+	description: string;
+	price: number;
+	creator_id: string;
+	creator?: {
+		wallet_address: string;
+		nickname?: string;
+	};
+	created_at: string;
+	category?: string;
+	thumbnail_url?: string;
+	subscriber_count?: number;
+}
 
 // 카테고리 목록
 const CATEGORIES = ['전체', '주식', '암호화폐', '부동산', '퀀트', 'ETF', '절세'];
@@ -89,22 +31,68 @@ export default function Contents() {
 
 	const [selectedCategory, setSelectedCategory] = useState(categoryParam || '전체');
 	const [sortBy, setSortBy] = useState('latest');
+	const [contents, setContents] = useState<Content[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
-	// 카테고리 및 정렬 기준에 따라 콘텐츠 필터링
-	const filteredContents = MOCK_CONTENTS.filter(
-		(content) => selectedCategory === '전체' || content.category === selectedCategory
-	).sort((a, b) => {
-		if (sortBy === 'latest') {
-			return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-		} else if (sortBy === 'popular') {
-			return b.subscriberCount - a.subscriberCount;
-		} else if (sortBy === 'priceAsc') {
-			return a.price - b.price;
-		} else if (sortBy === 'priceDesc') {
-			return b.price - a.price;
-		}
-		return 0;
-	});
+	// 콘텐츠 API 호출
+	useEffect(() => {
+		const fetchContents = async () => {
+			try {
+				setLoading(true);
+				// 카테고리 필터링을 서버에서 처리
+				const url =
+					selectedCategory !== '전체'
+						? `/api/contents?category=${encodeURIComponent(selectedCategory)}`
+						: '/api/contents';
+
+				const response = await axios.get(url);
+				if (response.data && Array.isArray(response.data)) {
+					setContents(response.data);
+				}
+				setError(null);
+			} catch (err) {
+				console.error('콘텐츠 로드 중 오류 발생:', err);
+				setError('콘텐츠를 불러오는 중 오류가 발생했습니다.');
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchContents();
+	}, [selectedCategory]);
+
+	// 콘텐츠 카테고리 파싱 함수 (DB에 category가 없는 경우 사용)
+	const getCategoryFromTitle = (title: string): string => {
+		if (title.includes('주식')) return '주식';
+		if (title.includes('암호화폐') || title.includes('블록체인')) return '암호화폐';
+		if (title.includes('부동산')) return '부동산';
+		if (title.includes('퀀트') || title.includes('알고리즘')) return '퀀트';
+		if (title.includes('ETF')) return 'ETF';
+		if (title.includes('세금') || title.includes('절세')) return '절세';
+		return '전체';
+	};
+
+	// 콘텐츠 정렬 기준에 따라 필터링
+	const filteredContents = contents
+		.map((content) => ({
+			...content,
+			// DB에 카테고리가 없으면 제목에서 추출
+			category: content.category || getCategoryFromTitle(content.title),
+			subscriber_count: Math.floor(Math.random() * 1500) + 100, // 목 데이터
+		}))
+		.sort((a, b) => {
+			if (sortBy === 'latest') {
+				return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+			} else if (sortBy === 'popular') {
+				return (b.subscriber_count || 0) - (a.subscriber_count || 0);
+			} else if (sortBy === 'priceAsc') {
+				return a.price - b.price;
+			} else if (sortBy === 'priceDesc') {
+				return b.price - a.price;
+			}
+			return 0;
+		});
 
 	return (
 		<div className="container mx-auto px-4 py-8">
@@ -139,28 +127,42 @@ export default function Contents() {
 				</div>
 			</div>
 
-			{/* 콘텐츠 그리드 */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-				{filteredContents.map((content) => (
-					<ContentCard
-						key={content.id}
-						id={content.id}
-						title={content.title}
-						description={content.description}
-						price={content.price}
-						creator={content.creator}
-						creatorAddress={content.creatorAddress}
-						subscriberCount={content.subscriberCount}
-						category={content.category}
-						thumbnail={`https://source.unsplash.com/random/600x400?${content.category}`}
-						createdAt={content.createdAt}
-						showHoverEffect={true}
-						currencySymbol="HSK"
-					/>
-				))}
-			</div>
+			{/* 로딩 상태 표시 */}
+			{loading && (
+				<div className="flex justify-center my-12">
+					<div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+				</div>
+			)}
 
-			{filteredContents.length === 0 && (
+			{/* 에러 메시지 */}
+			{error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-8">{error}</div>}
+
+			{/* 콘텐츠 그리드 */}
+			{!loading && (
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+					{filteredContents.map((content) => (
+						<ContentCard
+							key={content.id}
+							id={content.id}
+							title={content.title}
+							description={content.description}
+							price={content.price}
+							creator={content.creator?.nickname || `Creator-${content.creator_id.substring(0, 5)}`}
+							creatorAddress={content.creator?.wallet_address || '0x1234...5678'}
+							subscriberCount={content.subscriber_count || 0}
+							category={content.category || '기타'}
+							thumbnail={
+								content.thumbnail_url || `https://source.unsplash.com/random/600x400?${content.category || 'finance'}`
+							}
+							createdAt={content.created_at}
+							showHoverEffect={true}
+							currencySymbol="HSK"
+						/>
+					))}
+				</div>
+			)}
+
+			{!loading && filteredContents.length === 0 && (
 				<div className="text-center py-16">
 					<p className="text-gray-500 text-lg">해당 카테고리에 콘텐츠가 없습니다.</p>
 				</div>

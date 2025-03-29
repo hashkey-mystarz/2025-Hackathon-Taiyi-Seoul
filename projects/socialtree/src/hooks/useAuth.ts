@@ -3,10 +3,13 @@ import { useWalletStore } from '@/store/walletStore';
 import axios from 'axios';
 
 // 사용자 정보 인터페이스
-interface User {
+export interface User {
 	id: string;
 	wallet_address: string;
 	referral_code?: string;
+	referrer_id?: string;
+	nickname?: string;
+	// ... 기타 사용자 속성
 }
 
 // 지갑 타입 정의

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
 	try {
 		const supabase = createClient();
-		const { userId, title, description, price } = await request.json();
+		const { userId, title, description, price, thumbnail_url, category } = await request.json();
 
 		if (!userId || !title || price === undefined) {
 			return NextResponse.json({ error: '사용자 ID, 제목, 가격은 필수입니다.' }, { status: 400 });
@@ -34,8 +34,10 @@ export async function POST(request: NextRequest) {
 				title: title,
 				description: description || '',
 				price: parseFloat(price),
+				thumbnail_url: thumbnail_url || null,
+				category: category || null,
 			})
-			.select('id, creator_id, title, description, price, created_at')
+			.select('id, creator_id, title, description, price, thumbnail_url, category, created_at')
 			.single();
 
 		if (createError) {
@@ -62,14 +64,31 @@ export async function GET(request: NextRequest) {
 		const { searchParams } = new URL(request.url);
 
 		const creatorId = searchParams.get('creatorId');
+		const categoryFilter = searchParams.get('category');
 
 		let query = supabase
 			.from('contents')
-			.select('id, creator_id, title, description, price, created_at')
+			.select(
+				`
+				id, 
+				creator_id, 
+				title, 
+				description, 
+				price, 
+				thumbnail_url,
+				category,
+				created_at,
+				creator:users(wallet_address, nickname)
+			`
+			)
 			.order('created_at', { ascending: false });
 
 		if (creatorId) {
 			query = query.eq('creator_id', creatorId);
+		}
+
+		if (categoryFilter && categoryFilter !== '전체') {
+			query = query.eq('category', categoryFilter);
 		}
 
 		const { data: contents, error } = await query;
@@ -79,10 +98,8 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({ error: '콘텐츠 조회 중 오류가 발생했습니다.' }, { status: 500 });
 		}
 
-		return NextResponse.json({
-			contents: contents,
-			count: contents.length,
-		});
+		// 도메인에 맞게 응답 형식 변환 (contents 배열 직접 반환)
+		return NextResponse.json(contents);
 	} catch (error) {
 		console.error('서버 오류:', error);
 		return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });

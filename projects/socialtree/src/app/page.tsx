@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import ContentCard from '@/components/global/ContentCard';
 
 export default function Home() {
 	// 목업 데이터 - 실제로는 API 또는 supabase에서 가져올 것
@@ -10,22 +11,25 @@ export default function Home() {
 			id: 1,
 			title: '비트코인 투자 전략 가이드',
 			description: '비트코인 시장 분석 및 투자 전략을 알려드립니다.',
-			price: 0.05,
+			price: 50,
 			author: '김준호',
+			category: '암호화폐',
 		},
 		{
 			id: 2,
 			title: '월 200만원 배당금 수익 전략',
 			description: '안정적인 배당 투자로 수익 창출하는 방법',
-			price: 0.03,
+			price: 30,
 			author: '이민지',
+			category: '주식',
 		},
 		{
 			id: 3,
 			title: '부동산 투자의 모든 것',
 			description: '부동산 시장 분석 및 투자 전략을 공유합니다.',
-			price: 0.08,
+			price: 80,
 			author: '박상현',
+			category: '부동산',
 		},
 	];
 
@@ -168,21 +172,17 @@ export default function Home() {
 					<h2 className="text-2xl font-bold text-gray-900 mb-6">인기 콘텐츠</h2>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{mockContents.map((content) => (
-							<div key={content.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-								<div className="p-6">
-									<h3 className="text-lg font-bold text-gray-900 mb-2">{content.title}</h3>
-									<p className="text-gray-600 text-sm mb-4">{content.description}</p>
-									<div className="flex justify-between items-center">
-										<span className="text-sm text-gray-500">작성자: {content.author}</span>
-										<span className="text-primary font-bold">{content.price} ETH/월</span>
-									</div>
-								</div>
-								<div className="border-t border-gray-200 px-6 py-4">
-									<button className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary/90 transition duration-200">
-										구독하기
-									</button>
-								</div>
-							</div>
+							<ContentCard
+								key={content.id}
+								id={content.id}
+								title={content.title}
+								description={content.description}
+								price={content.price}
+								creator={content.author}
+								category={content.category}
+								showHoverEffect={true}
+								currencySymbol="HSK"
+							/>
 						))}
 					</div>
 				</div>

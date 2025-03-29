@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Frontend 개발 규칙
+
+## 개요
+이 문서는 socialtree 프로젝트에서 프론트엔드(Next.js) 관련 개발을 진행할 때 참고해야 할 규칙을 정의합니다.
+
+## 참조 문서
+- [Next.js 문서](mdc:https:/nextjs.org/docs)
+- [React 문서](mdc:https:/react.dev/reference/react)
+- [TypeScript 문서](mdc:https:/www.typescriptlang.org/docs)
+- [TailwindCSS 문서](mdc:https:/tailwindcss.com/docs)
+- [React Hook Form 문서](mdc:https:/react-hook-form.com/get-started)
+- [TanStack Query 문서](mdc:https:/tanstack.com/query/latest/docs/framework/react/overview)
+- [shadcn 문서](mdc:https:/ui.shadcn.com/docs/installation)
+- [Hashkey 문서](mdc:https:/docs.hsk.xyz)

@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# backend 개발 규칙
+
+## 개요
+이 문서는 socialtree 프로젝트에서 백엔드(Supabase + Next.js API Routes) 관련 개발을 진행할 때 참고해야 할 규칙을 정의합니다.
+
+## 참조 문서
+- [Supabase SDK 문서](mdc:https:/supabase.com/docs/reference/javascript/introduction)
+- [Next.js API Routes 문서](mdc:https:/nextjs.org/docs/api-routes/introduction)
+- [Hashkey 문서](mdc:https:/docs.hsk.xyz)

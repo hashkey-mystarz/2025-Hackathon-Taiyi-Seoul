@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Share2, Copy, CheckCircle2, Calendar, Users, Tag, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useWalletStore } from '@/store/walletStore';
+import Image from 'next/image';
 
 // Mock data - 실제 구현 시 API 호출로 대체
 const MOCK_CONTENTS = [
@@ -128,7 +130,7 @@ const MOCK_CONTENTS = [
 export default function ContentDetail() {
 	const { id } = useParams();
 	const router = useRouter();
-	const { address, isConnected } = useAuth();
+	const { address } = useWalletStore();
 	const sharePopupRef = useRef<HTMLDivElement>(null);
 	const shareButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -216,7 +218,7 @@ export default function ContentDetail() {
 	}, [showShareOption]);
 
 	const handleSubscribe = () => {
-		if (!isConnected) {
+		if (!address) {
 			alert('지갑 연결이 필요합니다.');
 			return;
 		}
@@ -239,7 +241,7 @@ export default function ContentDetail() {
 	};
 
 	const generateReferralLink = () => {
-		if (!isConnected || !address || !subscribed) {
+		if (!address || !subscribed) {
 			return '';
 		}
 
@@ -249,7 +251,7 @@ export default function ContentDetail() {
 	};
 
 	const copyReferralLink = () => {
-		if (!isConnected) {
+		if (!address) {
 			alert('지갑 연결이 필요합니다.');
 			return;
 		}
@@ -426,9 +428,9 @@ export default function ContentDetail() {
 												/>
 												<button
 													onClick={copyReferralLink}
-													disabled={!isConnected || !subscribed}
+													disabled={!address || !subscribed}
 													className={`p-2 text-white rounded-r-lg ${
-														!isConnected || !subscribed ? 'bg-gray-300' : 'bg-primary hover:bg-primary/90'
+														!address || !subscribed ? 'bg-gray-300' : 'bg-primary hover:bg-primary/90'
 													}`}
 												>
 													{referralCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}

@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreditCard, BookOpen, Award, History, ArrowUpRight, LogOut, Clock } from 'lucide-react';
 import ContentCard from '@/components/global/ContentCard';
 import { useAuth } from '@/hooks/useAuth';
+import { useWalletStore } from '@/store/walletStore';
 
 // Mock data - 실제 구현 시 API 호출로 대체
 const MOCK_SUBSCRIPTIONS = [
@@ -66,14 +67,20 @@ const MOCK_REFERRALS = [
 
 export default function MyPage() {
 	const router = useRouter();
-	const { address, isConnected, isAuthenticated, logout, isLoading } = useAuth();
+	const { logout, isLoading } = useAuth();
+	const { address } = useWalletStore();
 
 	const [activeTab, setActiveTab] = useState('overview');
 	const [totalCommission, setTotalCommission] = useState(0);
 	const [nextMonthPayment, setNextMonthPayment] = useState(0);
 	const [directReferrals, setDirectReferrals] = useState(0);
 	const [indirectReferrals, setIndirectReferrals] = useState(0);
-	const [pageLoading, setPageLoading] = useState(true);
+	const [hydrated, setHydrated] = useState(false);
+
+	// Zustand 스토어 하이드레이션 확인
+	useEffect(() => {
+		setHydrated(true);
+	}, []);
 
 	// 데이터 초기화 effect
 	useEffect(() => {
@@ -93,20 +100,17 @@ export default function MyPage() {
 
 	// 로그인 상태 확인 effect
 	useEffect(() => {
-		// 로딩 중일 때는 체크하지 않음 (연결 복원 중일 수 있으므로)
-		if (isLoading) {
+		// 하이드레이션 되지 않은 경우 체크하지 않음
+		if (!hydrated) {
 			return;
 		}
 
 		// 로딩이 끝났고 연결이 없으면 홈으로 리다이렉트
-		if (!isConnected) {
+		if (!address) {
 			router.push('/');
 			return;
 		}
-
-		// 로딩이 끝나고 연결이 있으면 페이지 로딩 완료
-		setPageLoading(false);
-	}, [isConnected, isLoading, router]);
+	}, [address, router, hydrated]);
 
 	const handleWithdraw = () => {
 		if (totalCommission <= 0) {
@@ -119,12 +123,15 @@ export default function MyPage() {
 	};
 
 	const handleLogout = () => {
+		// 로그아웃 처리
 		logout();
-		router.push('/');
+
+		// 메인 페이지로 즉시 이동
+		window.location.href = '/';
 	};
 
-	// 로딩 중이거나 페이지 로딩 중이면 로딩 상태 표시
-	if (isLoading || pageLoading) {
+	// 하이드레이션 전이거나 로딩 중이면 로딩 상태 표시
+	if (!hydrated || isLoading) {
 		return (
 			<div className="container mx-auto px-4 py-16 text-center">
 				<div className="flex flex-col items-center justify-center">
@@ -137,7 +144,7 @@ export default function MyPage() {
 	}
 
 	// 연결되지 않은 경우 (로딩 완료 후)
-	if (!isConnected) {
+	if (!address) {
 		return (
 			<div className="container mx-auto px-4 py-16 text-center">
 				<h1 className="text-2xl font-bold text-gray-800 mb-4">로그인이 필요합니다</h1>

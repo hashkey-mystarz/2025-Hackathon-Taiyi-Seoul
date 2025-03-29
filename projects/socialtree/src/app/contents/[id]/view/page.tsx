@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft, Calendar, Users, Tag } from 'lucide-react';
+import { useWalletStore } from '@/store/walletStore';
 
 // Mock data - 실제 구현 시 API 호출로 대체
 const MOCK_CONTENTS = [
@@ -306,15 +307,16 @@ export default function ContentView() {
 	// id 값을 명확한 string 타입으로 처리
 	const id: string = Array.isArray(params.id) ? params.id[0] : params.id || '';
 	const router = useRouter();
-	const { address, isConnected, isAuthenticated } = useAuth();
+	const { isLoading } = useAuth();
+	const { address } = useWalletStore();
 
 	const [content, setContent] = useState<Content | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [isSubscribed, setIsSubscribed] = useState(false);
 
 	useEffect(() => {
-		// 인증 및 연결 상태 확인
-		if (!isConnected || !isAuthenticated) {
+		// 연결 상태 확인
+		if (!address) {
 			router.push(`/contents/${id}`);
 			return;
 		}
@@ -348,7 +350,7 @@ export default function ContentView() {
 		};
 
 		fetchContent();
-	}, [id, router, address, isConnected, isAuthenticated]);
+	}, [id, router, address]);
 
 	// 마크다운 텍스트를 HTML로 변환하는 함수
 	const renderMarkdown = (markdown: string) => {

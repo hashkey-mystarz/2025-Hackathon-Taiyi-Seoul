@@ -1,3 +1,4 @@
+export const RPC_URL = 'https://hashkeychain-testnet.alt.technology';
 export const CONTRACT_NAME = 'SocialTreeCommission';
 export const CONTRACT_ADDRESS = '0x8919d5A2bB03a7E76d1Dc14322a506A9AcF1FF3D';
 

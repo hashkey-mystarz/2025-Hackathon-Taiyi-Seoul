@@ -92,9 +92,14 @@
 
 ### ⚙ Backend API (MVP)
 
-- [ ] `POST /api/users/signup`: 추천코드 포함 유저 생성
-- [ ] `GET /api/users/:id/referrals`: 하위 유저 리스트 조회
-- [ ] `GET /api/rewards/:id`: 커미션 내역 조회 (on-chain 또는 오프체인 캐싱)
+- [x] `POST /api/users/signup`: 지갑 주소로 사용자 생성
+- [x] `GET /api/users/:id/commissions`: 사용자의 콘텐츠별 수수료 내역 조회
+- [x] `GET /api/contents/:id/referrals`: 특정 콘텐츠의 직접 추천 내역 조회
+- [x] `POST /api/subscriptions`: 콘텐츠 구독 생성 (추천 코드 처리 포함)
+- [x] `GET /api/subscriptions/:id`: 구독 상세 정보 조회
+- [x] `POST /api/contents`: 콘텐츠 생성
+- [x] `GET /api/contents`: 콘텐츠 목록 조회
+- [x] `GET /api/contents/:id`: 콘텐츠 상세 정보 조회
 
 ---
 

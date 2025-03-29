@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import ConnectHashKey from '../ConnectHashKey';
 import { useState } from 'react';

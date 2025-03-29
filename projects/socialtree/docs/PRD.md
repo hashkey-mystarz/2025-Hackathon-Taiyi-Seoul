@@ -55,20 +55,20 @@
 
 ### 초기 세팅 및 프로젝트 구성
 
-- [ ] Next.js 프로젝트 초기화 (`app` 디렉토리 or `pages` 디렉토리 기준 결정)
-- [ ] Tailwind CSS 4 + PostCSS 설치 및 설정
-- [ ] `shadcn/ui` 초기 설치 (`npx shadcn-ui@latest init`)
-- [ ] 환경 변수 세팅 (`.env.local`: Supabase, RPC 등)
-- [ ] Supabase 프로젝트 생성 및 키 발급
-- [ ] Ethers.js 및 MetaMask 연동 세팅
+- [x] Next.js 프로젝트 초기화 (`app` 디렉토리 or `pages` 디렉토리 기준 결정)
+- [x] Tailwind CSS 4 + PostCSS 설치 및 설정
+- [x] `shadcn/ui` 초기 설치 (`npx shadcn-ui@latest init`)
+- [x] 환경 변수 세팅 (`.env.local`: Supabase, RPC 등)
+- [x] Supabase 프로젝트 생성 및 키 발급
+- [x] Ethers.js 및 MetaMask 연동 세팅
 
 ---
 
 ### 기본 UI 레이아웃 & 라우팅 구조 세팅
 
-- [ ] 전체 레이아웃 컴포넌트 (`<Header />`, `<Main />`, `<Footer />`)
-- [ ] Primary color 설정 (Tailwind에서 `blue` 계열로 설정)
-- [ ] 메인 페이지 (`/`) – 프로모션 배너, 플렛폼 콘텐츠 리스트 -> mockup
+- [x] 전체 레이아웃 컴포넌트 (`<Header />`, `<Main />`, `<Footer />`)
+- [x] Primary color 설정 (Tailwind에서 `blue` 계열로 설정)
+- [x] 메인 페이지 (`/`) – 프로모션 배너, 플렛폼 콘텐츠 리스트 -> mockup
 - [ ] 콘텐츠 리스트 페이지 (`/contents`)
 - [ ] 콘텐츠 상세 페이지 (`/contents/:id`)
 - [ ] 로그인 / 지갑 연결 페이지 (`/login`)

@@ -5,8 +5,8 @@ import GlobalHeader from '@/components/global/GlobalHeader';
 import GlobalFooter from '@/components/global/GlobalFooter';
 
 export const metadata: Metadata = {
-	title: 'socialtree',
-	description: '',
+	title: 'SocialTree | 금융 정보 SocialFi 플랫폼',
+	description: '콘텐츠 제작자와 홍보자가 모두 보상을 받을 수 있는 금융 정보 SocialFi 플랫폼',
 };
 
 export default function RootLayout({
@@ -15,11 +15,11 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en">
-			<body>
+		<html lang="ko" className="h-full">
+			<body className="flex flex-col min-h-screen bg-gray-50">
 				<ReactQueryProvider>
 					<GlobalHeader />
-					{children}
+					<main className="flex-grow pt-16">{children}</main>
 					<GlobalFooter />
 				</ReactQueryProvider>
 			</body>

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useHashkeyContext } from '@/components/provider/HashkeyContext';
 import { Share2, Copy, CheckCircle2, Calendar, Users, Tag, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 // Mock data - 실제 구현 시 API 호출로 대체
 const MOCK_CONTENTS = [
@@ -128,7 +129,9 @@ const MOCK_CONTENTS = [
 export default function ContentDetail() {
 	const { id } = useParams();
 	const router = useRouter();
-	const { address, isConnected } = useHashkeyContext();
+	const { address, isConnected } = useAuth();
+	const sharePopupRef = useRef<HTMLDivElement>(null);
+	const shareButtonRef = useRef<HTMLButtonElement>(null);
 
 	const [content, setContent] = useState<any>(null);
 	const [loading, setLoading] = useState(true);
@@ -165,6 +168,29 @@ export default function ContentDetail() {
 		fetchContent();
 	}, [id]);
 
+	useEffect(() => {
+		// 팝업 외부 클릭 감지 핸들러
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				sharePopupRef.current &&
+				!sharePopupRef.current.contains(event.target as Node) &&
+				shareButtonRef.current &&
+				!shareButtonRef.current.contains(event.target as Node) &&
+				showShareOption
+			) {
+				setShowShareOption(false);
+			}
+		};
+
+		// 이벤트 리스너 등록
+		document.addEventListener('mousedown', handleClickOutside);
+
+		// 클린업 함수
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [showShareOption]);
+
 	const handleSubscribe = () => {
 		if (!isConnected) {
 			alert('지갑 연결이 필요합니다.');
@@ -177,15 +203,19 @@ export default function ContentDetail() {
 	};
 
 	const generateReferralLink = () => {
-		if (!isConnected) {
-			alert('지갑 연결이 필요합니다.');
-			return;
+		if (!isConnected || !address) {
+			return '';
 		}
 
 		return `${window.location.origin}/contents/${id}?ref=${address?.substring(0, 10)}`;
 	};
 
 	const copyReferralLink = () => {
+		if (!isConnected) {
+			alert('지갑 연결이 필요합니다.');
+			return;
+		}
+
 		const link = generateReferralLink();
 		if (link) {
 			navigator.clipboard.writeText(link);
@@ -287,6 +317,7 @@ export default function ContentDetail() {
 
 							<div className="relative">
 								<button
+									ref={shareButtonRef}
 									onClick={() => setShowShareOption(!showShareOption)}
 									className="p-2 text-gray-500 hover:text-primary rounded-full hover:bg-gray-100"
 								>
@@ -294,7 +325,10 @@ export default function ContentDetail() {
 								</button>
 
 								{showShareOption && (
-									<div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg p-4 z-10">
+									<div
+										ref={sharePopupRef}
+										className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg p-4 z-10"
+									>
 										<h3 className="text-sm font-medium text-gray-700 mb-2">추천 링크 공유하기</h3>
 										<p className="text-xs text-gray-500 mb-3">
 											이 링크로 친구가 구독하면 20%의 추천 보상을 받을 수 있습니다!
@@ -362,7 +396,7 @@ export default function ContentDetail() {
 						</p>
 						{subscribed && (
 							<Link
-								href={`/mypage/contents/${id}`}
+								href={`/contents/${id}/view`}
 								className="inline-flex items-center text-primary font-medium hover:underline"
 							>
 								전체 콘텐츠 보기

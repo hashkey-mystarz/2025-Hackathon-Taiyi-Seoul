@@ -1,49 +1,7 @@
 import { createClient } from '@/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
-import { CONTRACT_ADDRESS, RPC_URL } from '@/constants/contractInfo';
-
-// 스마트 컨트랙트 ABI (필요한 함수만 포함)
-const CONTRACT_ABI = [
-	{
-		inputs: [
-			{
-				internalType: 'address',
-				name: '_user',
-				type: 'address',
-			},
-		],
-		name: 'getCommission',
-		outputs: [
-			{
-				internalType: 'uint256',
-				name: '',
-				type: 'uint256',
-			},
-		],
-		stateMutability: 'view',
-		type: 'function',
-	},
-	{
-		inputs: [
-			{
-				internalType: 'address',
-				name: '_user',
-				type: 'address',
-			},
-		],
-		name: 'getReferredUsers',
-		outputs: [
-			{
-				internalType: 'address[]',
-				name: '',
-				type: 'address[]',
-			},
-		],
-		stateMutability: 'view',
-		type: 'function',
-	},
-];
+import { CONTRACT_ADDRESS, RPC_URL, CONTRACT_ABI } from '@/constants/contractInfo';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
 	try {

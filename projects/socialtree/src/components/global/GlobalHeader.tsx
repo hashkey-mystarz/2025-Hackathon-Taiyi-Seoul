@@ -20,10 +20,7 @@ export default function GlobalHeader() {
 
 					{/* 네비게이션 - 모바일에서도 표시 */}
 					<nav className="flex items-center space-x-2 sm:space-x-8">
-						<Link
-							href="/contents"
-							className="text-gray-600 hover:text-primary px-2 py-2 text-sm font-medium hidden sm:block"
-						>
+						<Link href="/contents" className="text-gray-600 hover:text-primary px-2 py-2 text-sm font-medium ">
 							콘텐츠
 						</Link>
 

@@ -271,7 +271,7 @@ export default function MyPage() {
 												</span>
 											</div>
 											<Link
-												href={`/mypage/contents/${subscription.id}`}
+												href={`/contents/${subscription.id}/view`}
 												className="flex items-center justify-center text-sm text-white bg-primary px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
 											>
 												콘텐츠 보기

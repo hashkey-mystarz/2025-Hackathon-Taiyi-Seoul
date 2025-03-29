@@ -142,7 +142,7 @@ export function useAuth() {
 				// 사용자 정보 조회
 				const userInfo = await fetchUserInfo(walletAddress);
 
-				// 사용자 정보가 없으면 회원가입 API 호출
+				// 사용자 정보가 없으면 회원가입 API
 				if (!userInfo) {
 					try {
 						const signupResponse = await axios.post('/api/users/signup', {

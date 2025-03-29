@@ -6,21 +6,105 @@ import { CONTRACT_ADDRESS, RPC_URL, CONTRACT_ABI } from '@/constants/contractInf
 export async function POST(request: NextRequest) {
 	try {
 		const supabase = createClient();
-		const { userId, contentId, referralCode, transactionHash, amount, signature, message } = await request.json();
+		const requestData = await request.json();
+		const { userId, wallet_address, contentId, referralCode, transactionHash, amount, signature, message } =
+			requestData;
 
-		if (!userId || !contentId || !amount) {
-			return NextResponse.json({ error: '사용자 ID, 콘텐츠 ID, 금액은 필수입니다.' }, { status: 400 });
+		console.log('구독 API 요청 데이터:', requestData);
+
+		if (!contentId || !amount) {
+			return NextResponse.json({ error: '콘텐츠 ID, 금액은 필수입니다.' }, { status: 400 });
+		}
+
+		// userId나 wallet_address 중 하나는 반드시 있어야 함
+		if (!userId && !wallet_address) {
+			return NextResponse.json({ error: '사용자 ID나 지갑 주소 중 하나는 필수입니다.' }, { status: 400 });
 		}
 
 		// 사용자가 존재하는지 확인
-		const { data: user, error: userError } = await supabase
-			.from('users')
-			.select('id, wallet_address')
-			.eq('id', userId)
-			.single();
+		let user;
+		if (wallet_address) {
+			console.log('지갑 주소로 사용자 조회:', wallet_address);
+			// 지갑 주소로 사용자 조회
+			const { data: walletUser, error: walletUserError } = await supabase
+				.from('users')
+				.select('id, wallet_address')
+				.eq('wallet_address', wallet_address.toLowerCase())
+				.single();
 
-		if (userError || !user) {
-			return NextResponse.json({ error: '사용자를 찾을 수 없습니다.' }, { status: 404 });
+			if (walletUserError) {
+				console.log('기존 사용자 조회 결과 오류:', walletUserError);
+				// 사용자가 없으면 새로 생성
+				if (walletUserError.code === 'PGRST116') {
+					console.log('사용자가 존재하지 않아 새로 생성합니다.');
+					// 새로운 추천 코드 생성 (지갑 주소의 앞 6자리)
+					const referralCode = wallet_address.slice(2, 8).toLowerCase();
+
+					// 사용자 정보 준비
+					const newUserData = {
+						wallet_address: wallet_address.toLowerCase(),
+						referral_code: referralCode,
+					};
+					console.log('생성할 사용자 정보:', newUserData);
+
+					try {
+						const { data: newUser, error: createError } = await supabase
+							.from('users')
+							.insert(newUserData)
+							.select('id, wallet_address')
+							.single();
+
+						if (createError) {
+							console.error('사용자 생성 오류 상세:', createError);
+							return NextResponse.json(
+								{
+									error: '사용자 생성 중 오류가 발생했습니다.',
+									details: createError.message,
+									code: createError.code,
+								},
+								{ status: 500 }
+							);
+						}
+
+						console.log('새 사용자 생성 성공:', newUser);
+						user = newUser;
+					} catch (err) {
+						console.error('사용자 생성 중 예외 발생:', err);
+						return NextResponse.json(
+							{
+								error: '사용자 생성 중 예외가 발생했습니다.',
+								details: err instanceof Error ? err.message : String(err),
+							},
+							{ status: 500 }
+						);
+					}
+				} else {
+					console.error('사용자 조회 오류 상세:', walletUserError);
+					return NextResponse.json(
+						{
+							error: '사용자 조회 중 오류가 발생했습니다.',
+							details: walletUserError.message,
+							code: walletUserError.code,
+						},
+						{ status: 500 }
+					);
+				}
+			} else {
+				console.log('기존 사용자 조회 성공:', walletUser);
+				user = walletUser;
+			}
+		} else {
+			// userId로 사용자 조회
+			const { data: idUser, error: idUserError } = await supabase
+				.from('users')
+				.select('id, wallet_address')
+				.eq('id', userId)
+				.single();
+
+			if (idUserError || !idUser) {
+				return NextResponse.json({ error: '사용자를 찾을 수 없습니다.' }, { status: 404 });
+			}
+			user = idUser;
 		}
 
 		// 서명 검증 (있는 경우)
@@ -64,7 +148,7 @@ export async function POST(request: NextRequest) {
 		const { data: existingSubscription, error: subscriptionError } = await supabase
 			.from('subscriptions')
 			.select('id')
-			.eq('user_id', userId)
+			.eq('user_id', user.id)
 			.eq('content_id', contentId)
 			.eq('status', 'active')
 			.maybeSingle();
@@ -82,61 +166,51 @@ export async function POST(request: NextRequest) {
 		let onChainTxHash = '';
 		const walletAddress = user.wallet_address;
 
-		// 프라이빗 키는 보안상 서버 환경변수로 관리해야 함 (데모용으로만 사용)
-		const privateKey = process.env.ADMIN_PRIVATE_KEY || '';
-		if (privateKey) {
+		// 온체인 트랜잭션 검증 (클라이언트에서 트랜잭션 해시를 제공한 경우)
+		if (transactionHash) {
+			console.log('트랜잭션 해시 확인:', transactionHash);
 			try {
-				// 컨트랙트 연결
 				const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-				const wallet = new ethers.Wallet(privateKey, provider);
-				const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+				const receipt = await provider.getTransactionReceipt(transactionHash);
 
-				// 컨텐츠 정보 설정 (아직 설정되지 않은 경우)
-				const contentOnChainId = parseInt(contentId); // UUID를 정수로 변환하거나 별도의 매핑 필요
-
-				// 컨텐츠 생성자 지갑 주소 조회
-				const { data: creator, error: creatorError } = await supabase
-					.from('users')
-					.select('wallet_address')
-					.eq('id', content.creator_id)
-					.single();
-
-				if (!creatorError && creator) {
-					// 컨텐츠 정보 설정 시도 (이미 설정되어 있으면 오류 무시)
-					try {
-						await contract.setContent(
-							contentOnChainId,
-							ethers.utils.parseEther(content.price.toString()),
-							creator.wallet_address
-						);
-					} catch (err) {
-						console.log('컨텐츠가 이미 설정되어 있거나 설정 오류:', err);
-					}
-
-					// 구독 처리
-					const value = ethers.utils.parseEther(amount.toString());
-					const tx = await contract.subscribe(contentOnChainId, referrerWalletAddress || ethers.constants.AddressZero, {
-						value,
-					});
-
-					const receipt = await tx.wait();
-					onChainTxHash = receipt.transactionHash;
-					console.log('온체인 구독 완료:', onChainTxHash);
+				if (!receipt || receipt.status !== 1) {
+					console.error('트랜잭션 실패 또는 미확인:', receipt);
+					return NextResponse.json({ error: '유효하지 않은 트랜잭션입니다.' }, { status: 400 });
 				}
+
+				// 트랜잭션이 SocialTreeCommission 컨트랙트와 상호작용하는지 확인
+				if (receipt.to?.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase()) {
+					console.error('트랜잭션 대상이 올바른 컨트랙트가 아닙니다:', receipt.to);
+					return NextResponse.json({ error: '유효하지 않은 트랜잭션 대상입니다.' }, { status: 400 });
+				}
+
+				console.log('유효한 트랜잭션 확인됨:', receipt);
+				onChainTxHash = transactionHash;
 			} catch (err) {
-				console.error('온체인 처리 오류:', err);
-				// 온체인 처리가 실패해도 오프체인 DB에는 저장 진행
+				console.error('트랜잭션 검증 오류:', err);
+				return NextResponse.json(
+					{
+						error: '트랜잭션 검증 중 오류가 발생했습니다.',
+						details: err instanceof Error ? err.message : String(err),
+					},
+					{ status: 400 }
+				);
 			}
+		}
+		// 트랜잭션 해시가 없고 서버 측 처리도 실패한 경우, 오류 반환
+		else if (!onChainTxHash) {
+			console.error('트랜잭션 해시가 없고 서버 측 처리도 실패했습니다.');
+			return NextResponse.json({ error: '구독 처리를 위한 유효한 트랜잭션이 없습니다.' }, { status: 400 });
 		}
 
 		// 구독 생성 (오프체인 DB)
 		const { data: subscription, error: createError } = await supabase
 			.from('subscriptions')
 			.insert({
-				user_id: userId,
+				user_id: user.id,
 				content_id: contentId,
 				referrer_id: referrerId,
-				transaction_hash: onChainTxHash || transactionHash,
+				transaction_hash: onChainTxHash,
 				amount: amount,
 				status: 'active',
 				start_date: now.toISOString(),
@@ -158,7 +232,7 @@ export async function POST(request: NextRequest) {
 			await supabase.from('commissions').insert({
 				subscription_id: subscription.id,
 				user_id: referrerId,
-				from_user_id: userId,
+				from_user_id: user.id,
 				content_id: contentId,
 				level: 1,
 				amount: commissionAmount,
@@ -196,7 +270,7 @@ export async function POST(request: NextRequest) {
 				await supabase.from('commissions').insert({
 					subscription_id: subscription.id,
 					user_id: upperReferrer.referrer_id,
-					from_user_id: userId,
+					from_user_id: user.id,
 					content_id: contentId,
 					level: currentLevel,
 					amount: currentAmount,

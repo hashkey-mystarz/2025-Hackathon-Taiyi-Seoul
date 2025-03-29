@@ -8,6 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWalletStore } from '@/store/walletStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import axios from 'axios';
+import { ethers } from 'ethers';
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/constants/contractInfo';
 
 interface Content {
 	id: string;
@@ -137,37 +139,151 @@ export default function ContentDetail() {
 		};
 	}, [showShareOption]);
 
-	const handleSubscribe = () => {
+	const handleSubscribe = async () => {
 		if (!address) {
 			alert('지갑 연결이 필요합니다.');
 			return;
 		}
 
-		// 추천인 정보를 포함한 구독 처리
-		const referrerData = referrer ? { referrerCode: referrer } : null;
+		try {
+			// 메타마스크 연결 확인
+			const { ethereum } = window as any;
+			if (!ethereum) {
+				alert('메타마스크가 설치되어 있지 않습니다.');
+				return;
+			}
 
-		// 구독 API 호출
-		axios
-			.post('/api/subscriptions', {
-				wallet_address: address, // 사용자 지갑 주소
-				contentId: id, // 콘텐츠 ID
-				referralCode: referrerData?.referrerCode, // 추천인 코드
-				amount: content?.price, // 구독 금액
-				transactionHash: '', // 스마트 컨트랙트 처리 후 트랜잭션 해시 추가
-			})
-			.then((response) => {
-				// 성공 시 처리
-				alert(
-					`${content?.price} HSK로 "${content?.title}" 콘텐츠를 구독했습니다.${referrer ? ` 추천인: ${referrer}` : ''}`
-				);
-				// 구독 상태 갱신을 위해 페이지 새로고침
-				window.location.reload();
-			})
-			.catch((error) => {
-				// 오류 처리
-				console.error('구독 오류:', error);
-				alert(`구독 처리 중 오류가 발생했습니다: ${error.response?.data?.error || error.message}`);
+			// 추천인 정보를 포함한 구독 처리
+			const referrerData = referrer ? { referrerCode: referrer } : null;
+
+			// 고유한 콘텐츠 ID를 정수로 변환
+			// UUID나 문자열 ID는 간단한 해시 함수를 통해 정수로 변환
+			let contentIdNumber;
+			try {
+				// 먼저 직접 정수 변환 시도
+				contentIdNumber = parseInt(id);
+				// NaN이 나오면 해시 함수 사용
+				if (isNaN(contentIdNumber)) {
+					contentIdNumber = getNumericHashFromString(id);
+				}
+				console.log('콘텐츠 ID:', id);
+				console.log('변환된 숫자 ID:', contentIdNumber);
+			} catch (error) {
+				// 오류 발생 시 해시 함수 사용
+				contentIdNumber = getNumericHashFromString(id);
+				console.log('ID 변환 오류, 해시 사용:', contentIdNumber);
+			}
+
+			// 문자열을 숫자로 변환하는 간단한 해시 함수
+			function getNumericHashFromString(str: string): number {
+				let hash = 0;
+				for (let i = 0; i < str.length; i++) {
+					const char = str.charCodeAt(i);
+					hash = (hash << 5) - hash + char;
+					hash = hash & hash; // 32비트 정수로 변환
+				}
+				// 항상 양수로 만들고 작은 수로 제한 (스마트 컨트랙트 uint256 범위 내에서)
+				return Math.abs(hash) % 1000000;
+			}
+
+			// 컨트랙트 인스턴스 생성
+			const provider = new ethers.providers.Web3Provider(ethereum);
+			const signer = provider.getSigner();
+			const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+			// 결제 금액 (유효성 검사 추가)
+			if (!content || typeof content.price !== 'number') {
+				alert('콘텐츠 가격 정보가 유효하지 않습니다.');
+				setLoading(false);
+				return;
+			}
+
+			// 안전하게 숫자로 변환
+			const priceValue = content.price.toString();
+			console.log('결제 금액(숫자):', content.price);
+			console.log('결제 금액(문자열):', priceValue);
+
+			const price = ethers.utils.parseEther(priceValue);
+			console.log('변환된 Wei 단위 금액:', price.toString());
+
+			// 컨트랙트 호출 전 확인 메시지
+			const willProceed = confirm(`${content.price} HSK로 구독하시겠습니까?`);
+			if (!willProceed) return;
+
+			// 로딩 상태 표시
+			setLoading(true);
+
+			// 추천인 지갑 주소 확인 (없으면 zero address 사용)
+			let referrerAddress = ethers.constants.AddressZero;
+			if (referrerData?.referrerCode) {
+				try {
+					// 추천인 코드로 지갑 주소 조회 (실제로는 API 호출 필요)
+					const referrerResponse = await axios.get(`/api/users/referral/${referrerData.referrerCode}`);
+					if (referrerResponse.data && referrerResponse.data.wallet_address) {
+						referrerAddress = referrerResponse.data.wallet_address;
+					}
+				} catch (error) {
+					console.error('추천인 조회 오류:', error);
+					// 추천인 조회 실패 시 zero address 사용
+				}
+			}
+
+			console.log('구독 요청 정보:', {
+				contentId: contentIdNumber,
+				price: price.toString(),
+				referrer: referrerAddress,
 			});
+
+			// 컨트랙트 호출 - 구독 처리
+			const tx = await contract.subscribe(contentIdNumber, referrerAddress, {
+				value: price,
+			});
+
+			// 트랜잭션 처리 대기
+			const receipt = await tx.wait();
+			console.log('트랜잭션 완료:', receipt);
+
+			// 트랜잭션 해시
+			const transactionHash = receipt.transactionHash;
+
+			// API 요청 데이터
+			const requestData = {
+				wallet_address: address,
+				contentId: id,
+				referralCode: referrerData?.referrerCode,
+				amount: content?.price,
+				transactionHash: transactionHash,
+			};
+
+			console.log('구독 API 요청 데이터:', requestData);
+
+			// 구독 API 호출
+			const response = await axios.post('/api/subscriptions', requestData);
+			console.log('구독 성공:', response.data);
+
+			alert(
+				`${content?.price} HSK로 "${content?.title}" 콘텐츠를 구독했습니다.${referrer ? ` 추천인: ${referrer}` : ''}`
+			);
+
+			// 구독 상태 갱신을 위해 페이지 새로고침
+			window.location.reload();
+		} catch (error: any) {
+			setLoading(false);
+			// 오류 처리
+			console.error('구독 오류:', error);
+
+			// 메타마스크 오류 처리
+			if (error.code === 4001) {
+				alert('사용자가 트랜잭션을 취소했습니다.');
+				return;
+			}
+
+			const errorMessage = error.response?.data?.error || error.message || '알 수 없는 오류가 발생했습니다.';
+			const errorDetails = error.response?.data?.details || '';
+			alert(`구독 처리 중 오류가 발생했습니다: ${errorMessage}\n${errorDetails}`);
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	const generateReferralLink = () => {

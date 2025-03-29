@@ -4,14 +4,14 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
 	try {
 		const supabase = createClient();
-		const { walletAddress } = await request.json();
+		const { wallet_address } = await request.json();
 
-		if (!walletAddress) {
+		if (!wallet_address) {
 			return NextResponse.json({ error: '지갑 주소는 필수입니다.' }, { status: 400 });
 		}
 
 		// 지갑 주소 검증
-		if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+		if (!/^0x[a-fA-F0-9]{40}$/.test(wallet_address)) {
 			return NextResponse.json({ error: '유효하지 않은 지갑 주소입니다.' }, { status: 400 });
 		}
 
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 		const { data: existingUser } = await supabase
 			.from('users')
 			.select('id, wallet_address, referral_code')
-			.eq('wallet_address', walletAddress)
+			.eq('wallet_address', wallet_address)
 			.single();
 
 		if (existingUser) {
@@ -33,13 +33,13 @@ export async function POST(request: NextRequest) {
 		}
 
 		// 새로운 추천 코드 생성 (지갑 주소의 앞 6자리)
-		const referralCode = walletAddress.slice(2, 8).toLowerCase();
+		const referralCode = wallet_address.slice(2, 8).toLowerCase();
 
 		// 새 사용자 추가
 		const { data: newUser, error } = await supabase
 			.from('users')
 			.insert({
-				wallet_address: walletAddress,
+				wallet_address: wallet_address,
 				referral_code: referralCode,
 			})
 			.select('id, wallet_address, referral_code')

@@ -57,6 +57,7 @@ contract SocialTreeCommission {
     event CommissionDistributed(address indexed recipient, address indexed fromUser, uint256 amount, uint256 level);
     event CommissionWithdrawn(address indexed user, uint256 amount);
     event ReferralNetworkMigrated(address indexed fromUser, address indexed toReferrer, uint256 migratedCount);
+    event ContentRegistered(uint256 indexed contentId, uint256 price, address indexed creator);
     
     // 오너만 실행 가능한 modifier
     modifier onlyOwner() {
@@ -109,6 +110,8 @@ contract SocialTreeCommission {
         
         contentPrices[_contentId] = _price;
         contentCreators[_contentId] = _creator;
+        
+        emit ContentRegistered(_contentId, _price, _creator);
     }
     
     /**
@@ -125,9 +128,22 @@ contract SocialTreeCommission {
         uint256 price = contentPrices[_contentId];
         address creator = contentCreators[_contentId];
         
-        require(price > 0, "Content not registered");
-        require(creator != address(0), "Invalid content creator");
-        require(msg.value >= price, "Insufficient payment");
+        // 콘텐츠가 등록되지 않은 경우 자동으로 등록
+        if (price == 0 || creator == address(0)) {
+            // 메시지 값을 가격으로 사용
+            price = msg.value;
+            require(price > 0, "Payment amount must be greater than 0");
+            
+            // 콘텐츠 자동 등록 (메시지 발신자를 크리에이터로 설정)
+            contentPrices[_contentId] = price;
+            contentCreators[_contentId] = msg.sender;
+            creator = msg.sender;
+            
+            emit ContentRegistered(_contentId, price, creator);
+        } else {
+            // 이미 등록된 콘텐츠인 경우 충분한 금액이 지불되었는지 확인
+            require(msg.value >= price, "Insufficient payment");
+        }
         
         // 구독 정보 업데이트
         Subscription storage sub = subscriptions[msg.sender][_contentId];

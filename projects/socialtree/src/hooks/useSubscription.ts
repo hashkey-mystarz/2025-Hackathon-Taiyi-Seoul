@@ -35,19 +35,34 @@ export function useSubscription(
 
 			try {
 				// UUID 형식의 contentId를 스마트 컨트랙트용 숫자 ID로 변환
-				// 이 부분은 실제 구현에서 ID 매핑 테이블 또는 다른 방식으로 처리할 수 있음
 				let numericContentId: number;
 
 				if (typeof contentId === 'string') {
-					// UUID에서 숫자만 추출하여 변환 (임시 방법, 프로덕션에서는 더 나은 방법 사용 권장)
-					numericContentId = parseInt(contentId.replace(/\D/g, '').substring(0, 8), 16) % 100000;
+					// 먼저 직접 정수 변환 시도
+					numericContentId = parseInt(contentId);
+
+					// NaN이면 해시 함수 사용
+					if (isNaN(numericContentId)) {
+						numericContentId = getNumericHashFromString(contentId);
+					}
 				} else {
 					numericContentId = contentId;
 				}
 
-				// 숫자 변환 실패 시 에러
-				if (isNaN(numericContentId)) {
-					throw new Error('유효하지 않은 콘텐츠 ID입니다.');
+				// 로그 기록
+				console.log('useSubscription - 원본 ID:', contentId);
+				console.log('useSubscription - 변환된 숫자 ID:', numericContentId);
+
+				// 문자열을 숫자로 변환하는 간단한 해시 함수
+				function getNumericHashFromString(str: string): number {
+					let hash = 0;
+					for (let i = 0; i < str.length; i++) {
+						const char = str.charCodeAt(i);
+						hash = (hash << 5) - hash + char;
+						hash = hash & hash; // 32비트 정수로 변환
+					}
+					// 항상 양수로 만들고 작은 수로 제한 (스마트 컨트랙트 uint256 범위 내에서)
+					return Math.abs(hash) % 1000000;
 				}
 
 				// 컨트랙트 연결

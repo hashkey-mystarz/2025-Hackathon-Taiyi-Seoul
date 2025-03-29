@@ -1,6 +1,6 @@
 export const RPC_URL = 'https://hashkeychain-testnet.alt.technology';
 export const CONTRACT_NAME = 'SocialTreeCommission';
-export const CONTRACT_ADDRESS = '0x8919d5A2bB03a7E76d1Dc14322a506A9AcF1FF3D';
+export const CONTRACT_ADDRESS = '0xCA3d34BdF141fea6B41aC44FCD09e868667E507d';
 
 export const CONTRACT_ABI = [
 	{
@@ -56,6 +56,31 @@ export const CONTRACT_ABI = [
 			},
 		],
 		name: 'CommissionWithdrawn',
+		type: 'event',
+	},
+	{
+		anonymous: false,
+		inputs: [
+			{
+				indexed: true,
+				internalType: 'uint256',
+				name: 'contentId',
+				type: 'uint256',
+			},
+			{
+				indexed: false,
+				internalType: 'uint256',
+				name: 'price',
+				type: 'uint256',
+			},
+			{
+				indexed: true,
+				internalType: 'address',
+				name: 'creator',
+				type: 'address',
+			},
+		],
+		name: 'ContentRegistered',
 		type: 'event',
 	},
 	{
